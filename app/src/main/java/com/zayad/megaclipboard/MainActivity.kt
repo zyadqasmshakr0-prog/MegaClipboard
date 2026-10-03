@@ -11,19 +11,41 @@ import android.content.Context
 import android.content.ClipData
 import android.widget.Toast
 import android.view.ViewGroup
+import android.widget.Switch
+import android.content.SharedPreferences
+import android.content.Intent
+import android.provider.Settings
 
 class MainActivity : Activity() {
     private var currentTab = 0 
+    private lateinit var sharedPrefs: SharedPreferences
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         
         EngineManager.initEngine(applicationContext.filesDir.absolutePath)
+        sharedPrefs = getSharedPreferences("MegaPrefs", Context.MODE_PRIVATE)
+        
+        // إعداد زر التفعيل للانتقال لإعدادات الهاتف
+        val btnActivate = findViewById<Button>(R.id.btn_activate_keyboard)
+        btnActivate.text = "⚙️ تفعيل لوحة المفاتيح"
+        btnActivate.setOnClickListener {
+            startActivity(Intent(Settings.ACTION_INPUT_METHOD_SETTINGS))
+        }
+        
+        // إعداد مفتاح الحفظ الأبدي التلقائي
+        val switchAutoPin = findViewById<Switch>(R.id.switch_auto_pin)
+        switchAutoPin.text = "حفظ تلقائي أبدي (النصوص لا تُحذف)"
+        switchAutoPin.isChecked = sharedPrefs.getBoolean("auto_pin", false)
+        switchAutoPin.setOnCheckedChangeListener { _, isChecked ->
+            sharedPrefs.edit().putBoolean("auto_pin", isChecked).apply()
+            Toast.makeText(this, if(isChecked) "تم تفعيل الحفظ الأبدي" else "تم إيقاف الحفظ الأبدي", Toast.LENGTH_SHORT).show()
+        }
+        
         val tabTemp = findViewById<Button>(R.id.tab_temp)
         val tabPinned = findViewById<Button>(R.id.tab_pinned)
         
-        // هنا قمنا بإضافة النصوص برمجياً لتجنب خطأ الـ XML
         tabTemp.text = "⏳ المؤقتة (24س)"
         tabPinned.text = "📌 المثبتة (دائمة)"
         

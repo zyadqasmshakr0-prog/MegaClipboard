@@ -2,10 +2,18 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent" android:layout_height="match_parent"
     android:orientation="vertical" android:background="#F5F5F5">
+    
+    <!-- قسم التحكم الجديد (زر التفعيل ومفتاح الحفظ التلقائي) -->
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="15dp" android:background="#FFFFFF" android:layout_marginBottom="5dp">
+        <Button android:id="@+id/btn_activate_keyboard" android:layout_width="match_parent" android:layout_height="wrap_content" android:backgroundTint="#4CAF50" android:textColor="#FFFFFF" android:textStyle="bold" android:layout_marginBottom="10dp"/>
+        <Switch android:id="@+id/switch_auto_pin" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="16sp" android:textColor="#000000" android:textStyle="bold"/>
+    </LinearLayout>
+
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:background="#2196F3" android:padding="10dp">
         <Button android:id="@+id/tab_temp" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:backgroundTint="#FFFFFF" android:textColor="#2196F3" android:textStyle="bold" android:layout_marginEnd="5dp"/>
         <Button android:id="@+id/tab_pinned" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:backgroundTint="#81D4FA" android:textColor="#FFFFFF" android:textStyle="bold" android:layout_marginStart="5dp"/>
     </LinearLayout>
+    
     <ScrollView android:layout_width="match_parent" android:layout_height="match_parent" android:padding="10dp">
         <LinearLayout android:id="@+id/main_history_container" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical"/>
     </ScrollView>

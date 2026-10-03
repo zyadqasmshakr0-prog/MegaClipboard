@@ -19,15 +19,20 @@ class ClipboardKeyboard : InputMethodService() {
     private lateinit var clipboardManager: ClipboardManager
     private var historyContainer: LinearLayout? = null
     
+    private fun isAutoPinEnabled(): Boolean {
+        val prefs = getSharedPreferences("MegaPrefs", Context.MODE_PRIVATE)
+        return prefs.getBoolean("auto_pin", false)
+    }
+    
     private val clipboardListener = ClipboardManager.OnPrimaryClipChangedListener {
         val clip = clipboardManager.primaryClip
         if (clip != null && clip.itemCount > 0) {
             val item = clip.getItemAt(0)
             if (item.text != null && item.text.isNotEmpty()) {
-                EngineManager.addToEngine(item.text.toString(), 0)
+                EngineManager.addToEngine(item.text.toString(), 0, isAutoPinEnabled())
                 refreshHistoryView()
             } else if (item.uri != null) {
-                EngineManager.addToEngine(item.uri.toString(), 1)
+                EngineManager.addToEngine(item.uri.toString(), 1, isAutoPinEnabled())
                 refreshHistoryView()
             }
         }
@@ -100,7 +105,6 @@ class ClipboardKeyboard : InputMethodService() {
                     else currentInputConnection?.commitText("🖼 " + content, 1)
                 }
                 
-                // الحل الجذري لمشكلة القائمة المنبثقة داخل الكيبورد
                 btn.setOnLongClickListener {
                     val builder = AlertDialog.Builder(this@ClipboardKeyboard)
                     builder.setTitle("خيارات النص")
@@ -114,8 +118,8 @@ class ClipboardKeyboard : InputMethodService() {
                     val window = dialog.window
                     if (window != null) {
                         val lp = window.attributes
-                        lp.token = historyContainer?.windowToken // ربط النافذة بالكيبورد
-                        lp.type = WindowManager.LayoutParams.TYPE_INPUT_METHOD_DIALOG // تحديد نوع النافذة
+                        lp.token = historyContainer?.windowToken
+                        lp.type = WindowManager.LayoutParams.TYPE_INPUT_METHOD_DIALOG
                         window.attributes = lp
                         window.addFlags(WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM)
                     }

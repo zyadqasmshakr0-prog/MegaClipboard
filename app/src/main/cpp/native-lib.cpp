@@ -77,7 +77,7 @@ extern "C" JNIEXPORT void JNICALL Java_com_zayad_megaclipboard_EngineManager_cle
     if (changed) saveToFile(); 
 }
 
-extern "C" JNIEXPORT void JNICALL Java_com_zayad_megaclipboard_EngineManager_addToEngine(JNIEnv* env, jobject, jstring data, jint type) {
+extern "C" JNIEXPORT void JNICALL Java_com_zayad_megaclipboard_EngineManager_addToEngine(JNIEnv* env, jobject, jstring data, jint type, jboolean isAutoPinned) {
     const char* data_chars = env->GetStringUTFChars(data, nullptr);
     if (!clipboardHistory.empty() && clipboardHistory[0].content == string(data_chars)) {
         env->ReleaseStringUTFChars(data, data_chars);
@@ -86,7 +86,7 @@ extern "C" JNIEXPORT void JNICALL Java_com_zayad_megaclipboard_EngineManager_add
     ClipboardItem item;
     item.type = type; 
     item.content = string(data_chars);
-    item.isPinned = false;
+    item.isPinned = isAutoPinned; // يتم تثبيته فوراً إذا كان الخيار مفعلاً
     item.timestamp = chrono::duration_cast<chrono::seconds>(chrono::system_clock::now().time_since_epoch()).count();
     clipboardHistory.insert(clipboardHistory.begin(), item);
     env->ReleaseStringUTFChars(data, data_chars);
