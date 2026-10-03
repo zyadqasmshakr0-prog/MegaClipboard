@@ -13,15 +13,19 @@ import android.widget.Toast
 import android.view.ViewGroup
 
 class MainActivity : Activity() {
-private var currentTab = 0 // 0 = المؤقتة، 1 = المثبتة
-
-override fun onCreate(savedInstanceState: Bundle?) {
-super.onCreate(savedInstanceState)
-setContentView(R.layout.activity_main)
+    private var currentTab = 0 
+    
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
         
         EngineManager.initEngine(applicationContext.filesDir.absolutePath)
         val tabTemp = findViewById<Button>(R.id.tab_temp)
         val tabPinned = findViewById<Button>(R.id.tab_pinned)
+        
+        // هنا قمنا بإضافة النصوص برمجياً لتجنب خطأ الـ XML
+        tabTemp.text = "⏳ المؤقتة (24س)"
+        tabPinned.text = "📌 المثبتة (دائمة)"
         
         tabTemp.setOnClickListener {
             currentTab = 0
