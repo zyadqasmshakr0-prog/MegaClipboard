@@ -2,7 +2,6 @@
 
 import android.content.ClipboardManager
 import android.content.Context
-import android.content.Intent
 import android.inputmethodservice.InputMethodService
 import android.view.KeyEvent
 import android.view.View
@@ -12,6 +11,7 @@ import android.os.Handler
 import android.os.Looper
 import android.graphics.Color
 import android.view.ViewGroup
+import android.widget.Toast
 
 class ClipboardKeyboard : InputMethodService() {
     
@@ -33,10 +33,10 @@ class ClipboardKeyboard : InputMethodService() {
             val item = clip.getItemAt(0)
             if (item.text != null && item.text.isNotEmpty()) {
                 addToEngine(item.text.toString(), 0)
-                refreshHistoryView() // تحديث القائمة فوراً عند النسخ
+                refreshHistoryView()
             } else if (item.uri != null) {
                 addToEngine(item.uri.toString(), 1)
-                refreshHistoryView() // تحديث القائمة فوراً عند النسخ
+                refreshHistoryView()
             }
         }
     }
@@ -56,7 +56,7 @@ class ClipboardKeyboard : InputMethodService() {
     }
 
     override fun onCreateInputView(): View {
-        cleanupEngine() // تفعيل مؤقت الـ 24 ساعة
+        cleanupEngine()
         
         val view = layoutInflater.inflate(R.layout.keyboard_view, null)
         val btnDelete = view.findViewById<Button>(R.id.btn_delete)
@@ -75,16 +75,13 @@ class ClipboardKeyboard : InputMethodService() {
         }
 
         btnSettings.setOnClickListener {
-            val intent = Intent(this, MainActivity::class.java)
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            startActivity(intent)
+            Toast.makeText(this, "سيتم برمجة شاشة الإعدادات في الخطوة القادمة!", Toast.LENGTH_SHORT).show()
         }
 
-        refreshHistoryView() // رسم النصوص عند فتح الكيبورد
+        refreshHistoryView()
         return view
     }
 
-    // دالة تقوم برسم كل النصوص المخزنة وتضعها كأزرار يمكن النزول إليها
     private fun refreshHistoryView() {
         Handler(Looper.getMainLooper()).post {
             historyContainer?.removeAllViews()
@@ -93,7 +90,7 @@ class ClipboardKeyboard : InputMethodService() {
                 val content = getDataFromEngine(i)
                 val type = getTypeFromEngine(i)
                 
-                val btn = Button(this)
+                val btn = Button(this@ClipboardKeyboard)
                 val params = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
                 params.setMargins(0, 0, 0, 10)
                 btn.layoutParams = params
@@ -101,7 +98,6 @@ class ClipboardKeyboard : InputMethodService() {
                 btn.setBackgroundColor(Color.parseColor("#FFFFFF"))
                 btn.setTextColor(Color.parseColor("#000000"))
                 
-                // عرض أول 60 حرف فقط لكي لا يكون الزر ضخماً جداً
                 if (type == 0) {
                     btn.text = if (content.length > 60) content.substring(0, 60) + "..." else content
                 } else {
