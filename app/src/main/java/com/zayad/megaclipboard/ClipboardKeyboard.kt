@@ -14,136 +14,136 @@ import android.graphics.Color
 import android.view.ViewGroup
 
 class ClipboardKeyboard : InputMethodService() {
-private lateinit var clipboardManager: ClipboardManager
-private var historyContainer: LinearLayout? = null
+    private lateinit var clipboardManager: ClipboardManager
+    private var historyContainer: LinearLayout? = null
+    
+    // متغيرات نافذة الضغط المطول
+    private var dialogOverlay: LinearLayout? = null
+    private var btnPin: Button? = null
+    private var btnDelete: Button? = null
+    private var btnCancel: Button? = null
+    private var currentSelectedIndex = -1
+    
+    private fun isAutoPinEnabled(): Boolean {
+        val prefs = getSharedPreferences("MegaPrefs", Context.MODE_PRIVATE)
+        return prefs.getBoolean("auto_pin", false)
+    }
+    
+    private val clipboardListener = ClipboardManager.OnPrimaryClipChangedListener {
+        val clip = clipboardManager.primaryClip
+        if (clip != null && clip.itemCount > 0) {
+            val item = clip.getItemAt(0)
+            if (item.text != null && item.text.isNotEmpty()) {
+                EngineManager.addToEngine(item.text.toString(), 0, isAutoPinEnabled())
+                refreshHistoryView()
+            } else if (item.uri != null) {
+                EngineManager.addToEngine(item.uri.toString(), 1, isAutoPinEnabled())
+                refreshHistoryView()
+            }
+        }
+    }
 
-// متغيرات نافذة الضغط المطول
-private var dialogOverlay: LinearLayout? = null
-private var btnPin: Button? = null
-private var btnDelete: Button? = null
-private var btnCancel: Button? = null
-private var currentSelectedIndex = -1
+    override fun onCreate() {
+        super.onCreate()
+        EngineManager.initEngine(applicationContext.filesDir.absolutePath)
+        clipboardManager = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        clipboardManager.addPrimaryClipChangedListener(clipboardListener)
+    }
 
-private fun isAutoPinEnabled(): Boolean {
-val prefs = getSharedPreferences("MegaPrefs", Context.MODE_PRIVATE)
-return prefs.getBoolean("auto_pin", false)
-}
+    override fun onDestroy() {
+        super.onDestroy()
+        if (::clipboardManager.isInitialized) clipboardManager.removePrimaryClipChangedListener(clipboardListener)
+    }
 
-private val clipboardListener = ClipboardManager.OnPrimaryClipChangedListener {
-val clip = clipboardManager.primaryClip
-if (clip != null && clip.itemCount > 0) {
-val item = clip.getItemAt(0)
-if (item.text != null && item.text.isNotEmpty()) {
-EngineManager.addToEngine(item.text.toString(), 0, isAutoPinEnabled())
-refreshHistoryView()
-} else if (item.uri != null) {
-EngineManager.addToEngine(item.uri.toString(), 1, isAutoPinEnabled())
-refreshHistoryView()
-}
-}
-}
+    override fun onCreateInputView(): View {
+        EngineManager.cleanupEngine()
+        val view = layoutInflater.inflate(R.layout.keyboard_view, null)
+        
+        view.findViewById<Button>(R.id.btn_delete).apply {
+            text = "⌫"
+            setOnClickListener {
+                currentInputConnection?.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DEL))
+                currentInputConnection?.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DEL))
+            }
+        }
+        view.findViewById<Button>(R.id.btn_enter).apply {
+            text = "↵"
+            setOnClickListener {
+                currentInputConnection?.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER))
+                currentInputConnection?.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER))
+            }
+        }
+        view.findViewById<Button>(R.id.btn_settings).apply {
+            text = "⚙️️"
+            setOnClickListener {
+                val intent = Intent(this@ClipboardKeyboard, MainActivity::class.java)
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                startActivity(intent)
+            }
+        }
+        
+        historyContainer = view.findViewById(R.id.history_container)
+        
+        // ربط أزرار النافذة المدمجة
+        dialogOverlay = view.findViewById(R.id.dialog_overlay)
+        btnPin = view.findViewById(R.id.dialog_btn_pin)
+        btnDelete = view.findViewById(R.id.dialog_btn_delete)
+        btnCancel = view.findViewById(R.id.dialog_btn_cancel)
+        
+        btnCancel?.setOnClickListener { dialogOverlay?.visibility = View.GONE }
+        btnDelete?.setOnClickListener {
+            if (currentSelectedIndex != -1) {
+                EngineManager.deleteItem(currentSelectedIndex)
+                dialogOverlay?.visibility = View.GONE
+                refreshHistoryView()
+            }
+        }
+        btnPin?.setOnClickListener {
+            if (currentSelectedIndex != -1) {
+                EngineManager.pinItem(currentSelectedIndex)
+                dialogOverlay?.visibility = View.GONE
+                refreshHistoryView()
+            }
+        }
 
-override fun onCreate() {
-super.onCreate()
-EngineManager.initEngine(applicationContext.filesDir.absolutePath)
-clipboardManager = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-clipboardManager.addPrimaryClipChangedListener(clipboardListener)
-}
+        refreshHistoryView()
+        return view
+    }
 
-override fun onDestroy() {
-super.onDestroy()
-if (::clipboardManager.isInitialized) clipboardManager.removePrimaryClipChangedListener(clipboardListener)
-}
-
-override fun onCreateInputView(): View {
-EngineManager.cleanupEngine()
-val view = layoutInflater.inflate(R.layout.keyboard_view, null)
-
-view.findViewById(R.id.btn_delete).apply {
-text = "⌫"
-setOnClickListener {
-currentInputConnection?.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DEL))
-currentInputConnection?.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DEL))
-}
-}
-view.findViewById(R.id.btn_enter).apply {
-text = "↵"
-setOnClickListener {
-currentInputConnection?.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER))
-currentInputConnection?.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER))
-}
-}
-view.findViewById(R.id.btn_settings).apply {
-text = "⚙️️"
-setOnClickListener {
-val intent = Intent(this@ClipboardKeyboard, MainActivity::class.java)
-intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-startActivity(intent)
-}
-}
-
-historyContainer = view.findViewById(R.id.history_container)
-
-// ربط أزرار النافذة المدمجة
-dialogOverlay = view.findViewById(R.id.dialog_overlay)
-btnPin = view.findViewById(R.id.dialog_btn_pin)
-btnDelete = view.findViewById(R.id.dialog_btn_delete)
-btnCancel = view.findViewById(R.id.dialog_btn_cancel)
-
-btnCancel?.setOnClickListener { dialogOverlay?.visibility = View.GONE }
-btnDelete?.setOnClickListener {
-if (currentSelectedIndex != -1) {
-EngineManager.deleteItem(currentSelectedIndex)
-dialogOverlay?.visibility = View.GONE
-refreshHistoryView()
-}
-}
-btnPin?.setOnClickListener {
-if (currentSelectedIndex != -1) {
-EngineManager.pinItem(currentSelectedIndex)
-dialogOverlay?.visibility = View.GONE
-refreshHistoryView()
-}
-}
-
-refreshHistoryView()
-return view
-}
-
-private fun refreshHistoryView() {
-Handler(Looper.getMainLooper()).post {
-historyContainer?.removeAllViews()
-val count = EngineManager.getCountFromEngine()
-for (i in 0 until count) {
-val content = EngineManager.getDataFromEngine(i)
-val type = EngineManager.getTypeFromEngine(i)
-val isPinned = EngineManager.isItemPinned(i)
-
-val btn = Button(this@ClipboardKeyboard)
-val params = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-params.setMargins(0, 0, 0, 10)
-btn.layoutParams = params
-btn.isAllCaps = false
-btn.setBackgroundColor(Color.parseColor("#FFFFFF"))
-btn.setTextColor(Color.parseColor("#000000"))
-
-val prefix = if (isPinned) "📌 " else "⏳ "
-btn.text = if (type == 0) prefix + if (content.length > 60) content.substring(0, 60) + "..." else content else prefix + "🖼️ صورة / ملف"
-
-btn.setOnClickListener {
-if (type == 0) currentInputConnection?.commitText(content, 1)
-else currentInputConnection?.commitText("🖼 " + content, 1)
-}
-
-// تفعيل الضغط المطول ليُظهر النافذة المدمجة بثبات
-btn.setOnLongClickListener {
-currentSelectedIndex = i
-btnPin?.text = if (isPinned) "❌ إلغاء التثبيت" else "📌 تثبيت للأبد"
-dialogOverlay?.visibility = View.VISIBLE
-true
-}
-historyContainer?.addView(btn)
-}
-}
-}
+    private fun refreshHistoryView() {
+        Handler(Looper.getMainLooper()).post {
+            historyContainer?.removeAllViews()
+            val count = EngineManager.getCountFromEngine()
+            for (i in 0 until count) {
+                val content = EngineManager.getDataFromEngine(i)
+                val type = EngineManager.getTypeFromEngine(i)
+                val isPinned = EngineManager.isItemPinned(i)
+                
+                val btn = Button(this@ClipboardKeyboard)
+                val params = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                params.setMargins(0, 0, 0, 10)
+                btn.layoutParams = params
+                btn.isAllCaps = false
+                btn.setBackgroundColor(Color.parseColor("#FFFFFF"))
+                btn.setTextColor(Color.parseColor("#000000"))
+                
+                val prefix = if (isPinned) "📌 " else "⏳ "
+                btn.text = if (type == 0) prefix + if (content.length > 60) content.substring(0, 60) + "..." else content else prefix + "🖼️ صورة / ملف"
+                
+                btn.setOnClickListener {
+                    if (type == 0) currentInputConnection?.commitText(content, 1)
+                    else currentInputConnection?.commitText("🖼 " + content, 1)
+                }
+                
+                // تفعيل الضغط المطول ليُظهر النافذة المدمجة بثبات
+                btn.setOnLongClickListener {
+                    currentSelectedIndex = i
+                    btnPin?.text = if (isPinned) "❌ إلغاء التثبيت" else "📌 تثبيت للأبد"
+                    dialogOverlay?.visibility = View.VISIBLE
+                    true
+                }
+                historyContainer?.addView(btn)
+            }
+        }
+    }
 }
