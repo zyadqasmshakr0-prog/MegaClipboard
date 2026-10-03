@@ -2,6 +2,7 @@
 
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
 import android.inputmethodservice.InputMethodService
 import android.view.KeyEvent
 import android.view.View
@@ -11,7 +12,6 @@ import android.os.Handler
 import android.os.Looper
 import android.graphics.Color
 import android.view.ViewGroup
-import android.widget.Toast
 
 class ClipboardKeyboard : InputMethodService() {
     
@@ -75,7 +75,9 @@ class ClipboardKeyboard : InputMethodService() {
         }
 
         btnSettings.setOnClickListener {
-            Toast.makeText(this, "سيتم برمجة شاشة الإعدادات في الخطوة القادمة!", Toast.LENGTH_SHORT).show()
+            val intent = Intent(this, MainActivity::class.java)
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            startActivity(intent)
         }
 
         refreshHistoryView()
