@@ -6,18 +6,16 @@
 
 using namespace std;
 
-// تحديث الهيكل ليشمل كل طلباتك
 struct ClipboardItem {
-    int type; // 0 = نص، 1 = صورة أو ملف
-    string content; // النص أو رابط الصورة
-    bool isPinned; // هل هو مثبت؟
-    long long timestamp; // وقت النسخ للمؤقت
+    int type;
+    string content;
+    bool isPinned;
+    long long timestamp;
 };
 
 static vector<ClipboardItem> clipboardHistory;
-static string filePath = ""; // مسار الملف المحفوظ في ذاكرة الهاتف
+static string filePath = "";
 
-// 1. وظيفة الحفظ داخل الملفات (لحفظ البيانات للأبد)
 void saveToFile() {
     if(filePath.empty()) return;
     ofstream file(filePath, ios::binary);
@@ -34,7 +32,6 @@ void saveToFile() {
     file.close();
 }
 
-// 2. وظيفة استرجاع البيانات من الملف عند تشغيل الهاتف
 void loadFromFile() {
     if(filePath.empty()) return;
     ifstream file(filePath, ios::binary);
@@ -57,49 +54,66 @@ void loadFromFile() {
     file.close();
 }
 
-// تهيئة المحرك وإخباره بمكان حفظ الملفات
 extern "C" JNIEXPORT void JNICALL
 Java_com_zayad_megaclipboard_ClipboardKeyboard_initEngine(JNIEnv* env, jobject, jstring path) {
     const char* path_chars = env->GetStringUTFChars(path, nullptr);
-    filePath = string(path_chars) + "/megaclipboard_data.bin"; // اسم الملف السري
+    filePath = string(path_chars) + "/megaclipboard_data.bin";
     env->ReleaseStringUTFChars(path, path_chars);
-    loadFromFile(); // جلب البيانات السابقة فوراً
+    loadFromFile();
 }
 
-// إضافة نص أو صورة للذاكرة والملف
+extern "C" JNIEXPORT void JNICALL
+Java_com_zayad_megaclipboard_ClipboardKeyboard_cleanupEngine(JNIEnv* env, jobject) {
+    auto now = chrono::duration_cast<chrono::seconds>(chrono::system_clock::now().time_since_epoch()).count();
+    bool changed = false;
+    auto it = clipboardHistory.begin();
+    while (it != clipboardHistory.end()) {
+        if (!it->isPinned && (now - it->timestamp) > 86400) {
+            it = clipboardHistory.erase(it);
+            changed = true;
+        } else {
+            ++it;
+        }
+    }
+    if (changed) saveToFile(); 
+}
+
 extern "C" JNIEXPORT void JNICALL
 Java_com_zayad_megaclipboard_ClipboardKeyboard_addToEngine(JNIEnv* env, jobject, jstring data, jint type) {
     const char* data_chars = env->GetStringUTFChars(data, nullptr);
     
+    // منع تكرار نفس النص إذا كان هو الأخير
+    if (!clipboardHistory.empty() && clipboardHistory[0].content == string(data_chars)) {
+        env->ReleaseStringUTFChars(data, data_chars);
+        return;
+    }
+
     ClipboardItem item;
     item.type = type; 
     item.content = string(data_chars);
-    item.isPinned = false; // التثبيت الافتراضي مغلق
-    
-    // تسجيل وقت النسخ من أجل المؤقت لاحقاً
+    item.isPinned = false;
     auto now = chrono::system_clock::now();
     item.timestamp = chrono::duration_cast<chrono::seconds>(now.time_since_epoch()).count();
     
     clipboardHistory.insert(clipboardHistory.begin(), item);
     env->ReleaseStringUTFChars(data, data_chars);
-    
-    saveToFile(); // الحفظ داخل الملف فوراً!
+    saveToFile();
 }
 
-// جلب المحتوى (النص أو رابط الصورة)
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_zayad_megaclipboard_ClipboardKeyboard_getDataFromEngine(JNIEnv* env, jobject, jint index) {
-    if (index >= 0 && index < clipboardHistory.size()) {
-        return env->NewStringUTF(clipboardHistory[index].content.c_str());
-    }
+    if (index >= 0 && index < clipboardHistory.size()) return env->NewStringUTF(clipboardHistory[index].content.c_str());
     return env->NewStringUTF("");
 }
 
-// جلب نوع المحتوى لمعرفة هل نلصق نص أم صورة
 extern "C" JNIEXPORT jint JNICALL
 Java_com_zayad_megaclipboard_ClipboardKeyboard_getTypeFromEngine(JNIEnv* env, jobject, jint index) {
-    if (index >= 0 && index < clipboardHistory.size()) {
-        return clipboardHistory[index].type;
-    }
+    if (index >= 0 && index < clipboardHistory.size()) return clipboardHistory[index].type;
     return 0;
+}
+
+// دالة جديدة لجلب عدد النصوص لمعرفة كم زر سنرسم في القائمة
+extern "C" JNIEXPORT jint JNICALL
+Java_com_zayad_megaclipboard_ClipboardKeyboard_getCountFromEngine(JNIEnv* env, jobject) {
+    return clipboardHistory.size();
 }

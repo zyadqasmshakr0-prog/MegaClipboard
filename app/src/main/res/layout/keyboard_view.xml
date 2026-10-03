@@ -1,9 +1,19 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent" android:layout_height="wrap_content"
-    android:background="#1E1E1E" android:orientation="vertical" android:padding="10dp">
-    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:text="لوحة مفاتيح MegaClipboard (C++ Engine)" android:textColor="#FFFFFF" android:textAlignment="center" android:paddingBottom="10dp"/>
-    <Button android:id="@+id/btn_paste" android:layout_width="match_parent" android:layout_height="60dp"
-        android:text="📋 لصق النص من محرك C++" android:backgroundTint="#007ACC" android:textColor="#FFFFFF" android:textSize="18sp"/>
+    android:layout_width="match_parent" android:layout_height="280dp"
+    android:orientation="vertical" android:background="#EAEAEA">
+    
+    <!-- شريط الأزرار العلوي -->
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:padding="4dp" android:background="#D6D6D6">
+        <Button android:id="@+id/btn_settings" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="⚙️" android:textSize="18sp" android:backgroundTint="#FFFFFF" android:textColor="#000000"/>
+        <Button android:id="@+id/btn_enter" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="↵" android:textSize="20sp" android:backgroundTint="#FFFFFF" android:textColor="#000000" android:layout_marginHorizontal="4dp"/>
+        <Button android:id="@+id/btn_delete" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="⌫" android:textSize="18sp" android:backgroundTint="#FFFFFF" android:textColor="#000000"/>
+    </LinearLayout>
+
+    <!-- قائمة النصوص القابلة للتمرير للأسفل -->
+    <ScrollView android:layout_width="match_parent" android:layout_height="match_parent">
+        <LinearLayout android:id="@+id/history_container" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="6dp">
+            <!-- سيتم إضافة النصوص هنا برمجياً كأزرار متتالية -->
+        </LinearLayout>
+    </ScrollView>
 </LinearLayout>
