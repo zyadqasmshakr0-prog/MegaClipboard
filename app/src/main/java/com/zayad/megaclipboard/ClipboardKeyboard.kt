@@ -14,6 +14,7 @@ import android.graphics.Color
 import android.view.ViewGroup
 import android.app.AlertDialog
 import android.view.WindowManager
+
 class ClipboardKeyboard : InputMethodService() {
     private lateinit var clipboardManager: ClipboardManager
     private var historyContainer: LinearLayout? = null
@@ -52,7 +53,6 @@ class ClipboardKeyboard : InputMethodService() {
         val btnEnter = view.findViewById<Button>(R.id.btn_enter)
         val btnSettings = view.findViewById<Button>(R.id.btn_settings)
         
-        // إضافة رموز الأزرار العلوية برمجياً
         btnDelete.text = "⌫"
         btnEnter.text = "↵"
         btnSettings.text = "⚙️"
@@ -100,6 +100,7 @@ class ClipboardKeyboard : InputMethodService() {
                     else currentInputConnection?.commitText("🖼 " + content, 1)
                 }
                 
+                // الحل الجذري لمشكلة القائمة المنبثقة داخل الكيبورد
                 btn.setOnLongClickListener {
                     val builder = AlertDialog.Builder(this@ClipboardKeyboard)
                     builder.setTitle("خيارات النص")
@@ -112,8 +113,11 @@ class ClipboardKeyboard : InputMethodService() {
                     val dialog = builder.create()
                     val window = dialog.window
                     if (window != null) {
-                        window.setType(WindowManager.LayoutParams.TYPE_INPUT_METHOD_DIALOG)
-                        window.attributes.token = historyContainer?.windowToken
+                        val lp = window.attributes
+                        lp.token = historyContainer?.windowToken // ربط النافذة بالكيبورد
+                        lp.type = WindowManager.LayoutParams.TYPE_INPUT_METHOD_DIALOG // تحديد نوع النافذة
+                        window.attributes = lp
+                        window.addFlags(WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM)
                     }
                     dialog.show()
                     true
