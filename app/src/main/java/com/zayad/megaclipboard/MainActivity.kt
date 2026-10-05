@@ -24,19 +24,11 @@ class MainActivity : Activity() {
     private lateinit var sharedPrefs: SharedPreferences
     
     // دالة تحويل الوقت
-    private fun formatTimeAgo(timestampSeconds: Long): String {
-        val date = Date(timestampSeconds * 1000L)
-        val format = SimpleDateFormat("hh:mm a", Locale("ar"))
-        val timeStr = format.format(date)
-        
-        val diff = (System.currentTimeMillis() / 1000L) - timestampSeconds
-        val ago = when {
-            diff < 60 -> "الآن"
-            diff < 3600 -> "منذ {diff / 60} دقيقة"
-            diff < 86400 -> "منذ {diff / 3600} ساعة"
-            else -> "منذ {diff / 86400} يوم"
-        }
-        return "🕒 ago • الساعة timeStr"
+    private fun formatTime(ts: Long): String {
+        if (ts <= 0L) return ""
+        val date = Date(ts * 1000L)
+        val sdf = SimpleDateFormat("hh:mm a", Locale("ar"))
+        return sdf.format(date)
     }
     
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -119,7 +111,6 @@ class MainActivity : Activity() {
             val content = EngineManager.getDataFromEngine(i)
             val type = EngineManager.getTypeFromEngine(i)
             val timestamp = EngineManager.getTimestampFromEngine(i)
-            val timeString = formatTimeAgo(timestamp)
             
             val btn = Button(this)
             val params = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
@@ -130,10 +121,12 @@ class MainActivity : Activity() {
             btn.setTextColor(Color.parseColor("#000000"))
             
             val prefix = if (isPinned) "📌 " else "⏳ "
-            val mainText = if (type == 0) (if (content.length > 80) content.substring(0, 80) + "..." else content) else "🖼️️ صورة / ملف"
+            val mainText = if (type == 0) (if (content.length > 80) content.substring(0, 80) + "..." else content) else "🖼 صورة / ملف"
             
-            // دمج النص مع التاريخ
-            btn.text = "prefix mainText\ntimeString"
+            val timeStr = formatTime(timestamp)
+            val timeAppend = if (timeStr.length > 0) "  (🕒 " + timeStr + ")" else ""
+            
+            btn.text = prefix + mainText + timeAppend
             
             btn.setOnClickListener {
                 val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -145,7 +138,7 @@ class MainActivity : Activity() {
             btn.setOnLongClickListener {
                 val builder = AlertDialog.Builder(this)
                 builder.setTitle("خيارات النص")
-                val options = arrayOf(if(isPinned) "❌ إلغاء التثبيت" else "📌 تثبيت للأبد", "🗑️ حذف نهائي")
+                val options = arrayOf(if(isPinned) "❌ إلغاء التثبيت" else "📌 تثبيت للأبد", "🗑 حذف نهائي")
                 builder.setItems(options) { _, which ->
                     if (which == 0) EngineManager.pinItem(i)
                     if (which == 1) EngineManager.deleteItem(i)

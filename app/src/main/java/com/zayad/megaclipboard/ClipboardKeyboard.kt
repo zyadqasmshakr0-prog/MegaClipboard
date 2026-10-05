@@ -12,6 +12,8 @@ import android.os.Handler
 import android.os.Looper
 import android.graphics.Color
 import android.view.ViewGroup
+import android.app.AlertDialog
+import android.view.WindowManager
 import java.util.Date
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -31,20 +33,12 @@ class ClipboardKeyboard : InputMethodService() {
         return prefs.getBoolean("auto_pin", false)
     }
     
-    // دالة تحويل الوقت إلى نص مقروء بالعربية
-    private fun formatTimeAgo(timestampSeconds: Long): String {
-        val date = Date(timestampSeconds * 1000L)
-        val format = SimpleDateFormat("hh:mm a", Locale("ar"))
-        val timeStr = format.format(date)
-        
-        val diff = (System.currentTimeMillis() / 1000L) - timestampSeconds
-        val ago = when {
-            diff < 60 -> "الآن"
-            diff < 3600 -> "منذ {diff / 60} دقيقة"
-            diff < 86400 -> "منذ {diff / 3600} ساعة"
-            else -> "منذ {diff / 86400} يوم"
-        }
-        return "🕒 ago • الساعة timeStr"
+    // دالة جديدة آمنة ومختصرة للوقت (تظهر بجانب النص)
+    private fun formatTime(ts: Long): String {
+        if (ts <= 0L) return ""
+        val date = Date(ts * 1000L)
+        val sdf = SimpleDateFormat("hh:mm a", Locale("ar"))
+        return sdf.format(date)
     }
     
     private val clipboardListener = ClipboardManager.OnPrimaryClipChangedListener {
@@ -135,7 +129,6 @@ class ClipboardKeyboard : InputMethodService() {
                 val type = EngineManager.getTypeFromEngine(i)
                 val isPinned = EngineManager.isItemPinned(i)
                 val timestamp = EngineManager.getTimestampFromEngine(i)
-                val timeString = formatTimeAgo(timestamp)
                 
                 val btn = Button(this@ClipboardKeyboard)
                 val params = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
@@ -146,10 +139,13 @@ class ClipboardKeyboard : InputMethodService() {
                 btn.setTextColor(Color.parseColor("#000000"))
                 
                 val prefix = if (isPinned) "📌 " else "⏳ "
-                val mainText = if (type == 0) if (content.length > 60) content.substring(0, 60) + "..." else content else "🖼️ صورة / ملف"
+                val mainText = if (type == 0) (if (content.length > 50) content.substring(0, 50) + "..." else content) else "🖼️ صورة / ملف"
                 
-                // دمج النص مع التاريخ في سطرين
-                btn.text = "prefix mainText\ntimeString"
+                // جلب الوقت ودمجه بجوار النص مباشرة
+                val timeStr = formatTime(timestamp)
+                val timeAppend = if (timeStr.length > 0) "  (🕒 " + timeStr + ")" else ""
+                
+                btn.text = prefix + mainText + timeAppend
                 
                 btn.setOnClickListener {
                     if (type == 0) currentInputConnection?.commitText(content, 1)
