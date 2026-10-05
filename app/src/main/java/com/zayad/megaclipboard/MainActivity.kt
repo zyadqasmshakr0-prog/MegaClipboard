@@ -15,10 +15,29 @@ import android.widget.Switch
 import android.content.SharedPreferences
 import android.content.Intent
 import android.provider.Settings
+import java.util.Date
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 class MainActivity : Activity() {
     private var currentTab = 0 
     private lateinit var sharedPrefs: SharedPreferences
+    
+    // دالة تحويل الوقت
+    private fun formatTimeAgo(timestampSeconds: Long): String {
+        val date = Date(timestampSeconds * 1000L)
+        val format = SimpleDateFormat("hh:mm a", Locale("ar"))
+        val timeStr = format.format(date)
+        
+        val diff = (System.currentTimeMillis() / 1000L) - timestampSeconds
+        val ago = when {
+            diff < 60 -> "الآن"
+            diff < 3600 -> "منذ {diff / 60} دقيقة"
+            diff < 86400 -> "منذ {diff / 3600} ساعة"
+            else -> "منذ {diff / 86400} يوم"
+        }
+        return "🕒 ago • الساعة timeStr"
+    }
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -66,7 +85,6 @@ class MainActivity : Activity() {
         }
     }
 
-    // بمجرد أن يفتح المستخدم لوحة الإعدادات، يتم اصطياد أي نص نُسخ سابقاً من Gboard!
     override fun onResume() {
         super.onResume()
         try {
@@ -100,6 +118,8 @@ class MainActivity : Activity() {
             
             val content = EngineManager.getDataFromEngine(i)
             val type = EngineManager.getTypeFromEngine(i)
+            val timestamp = EngineManager.getTimestampFromEngine(i)
+            val timeString = formatTimeAgo(timestamp)
             
             val btn = Button(this)
             val params = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
@@ -110,7 +130,10 @@ class MainActivity : Activity() {
             btn.setTextColor(Color.parseColor("#000000"))
             
             val prefix = if (isPinned) "📌 " else "⏳ "
-            btn.text = if (type == 0) prefix + (if (content.length > 80) content.substring(0, 80) + "..." else content) else prefix + "🖼️ صورة / ملف"
+            val mainText = if (type == 0) (if (content.length > 80) content.substring(0, 80) + "..." else content) else "🖼️️ صورة / ملف"
+            
+            // دمج النص مع التاريخ
+            btn.text = "prefix mainText\ntimeString"
             
             btn.setOnClickListener {
                 val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
