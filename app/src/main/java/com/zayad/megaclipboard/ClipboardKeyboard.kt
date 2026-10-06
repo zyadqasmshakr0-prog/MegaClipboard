@@ -10,7 +10,6 @@ import android.os.Looper
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
-import android.widget.AlertDialog
 import android.widget.Button
 import android.widget.LinearLayout
 import java.text.SimpleDateFormat
@@ -266,6 +265,7 @@ class ClipboardKeyboard : InputMethodService() {
         val popupLayout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(24, 20, 24, 20)
+
             setBackgroundColor(
                 when (currentThemeIndex) {
                     1 -> Color.WHITE
@@ -277,9 +277,14 @@ class ClipboardKeyboard : InputMethodService() {
         val title = Button(this).apply {
             text = "⚙️ إعدادات التخطيط"
             isAllCaps = false
+
             setTextColor(
-                if (currentThemeIndex == 1) Color.BLACK else Color.WHITE
+                if (currentThemeIndex == 1)
+                    Color.BLACK
+                else
+                    Color.WHITE
             )
+
             setBackgroundColor(Color.TRANSPARENT)
             textSize = 18f
         }
@@ -292,6 +297,8 @@ class ClipboardKeyboard : InputMethodService() {
             )
         )
 
+        var popup: android.widget.PopupWindow? = null
+
         val names = listOf(
             "🇾🇪 عربي قياسي",
             "⚡ عربي سريع",
@@ -301,10 +308,12 @@ class ClipboardKeyboard : InputMethodService() {
         names.forEachIndexed { index, name ->
 
             val button = Button(this).apply {
-                text = if (index == currentLayoutIndex)
-                    "✓ $name"
-                else
-                    name
+
+                text =
+                    if (index == currentLayoutIndex)
+                        "✓ $name"
+                    else
+                        name
 
                 isAllCaps = false
 
@@ -338,7 +347,7 @@ class ClipboardKeyboard : InputMethodService() {
 
                     generateKeyboardLayout()
 
-                    popup.dismiss()
+                    popup?.dismiss()
                 }
             }
 
@@ -352,11 +361,12 @@ class ClipboardKeyboard : InputMethodService() {
         }
 
         val cancel = Button(this).apply {
+
             text = "إلغاء"
             isAllCaps = false
 
             setOnClickListener {
-                popup.dismiss()
+                popup?.dismiss()
             }
         }
 
@@ -368,22 +378,22 @@ class ClipboardKeyboard : InputMethodService() {
             )
         )
 
-        val popup = android.widget.PopupWindow(
+        popup = android.widget.PopupWindow(
             popupLayout,
             (resources.displayMetrics.widthPixels * 0.88f).toInt(),
             ViewGroup.LayoutParams.WRAP_CONTENT,
             true
         )
 
-        popup.setBackgroundDrawable(
+        popup?.setBackgroundDrawable(
             android.graphics.drawable.ColorDrawable(
                 Color.TRANSPARENT
             )
         )
 
-        popup.elevation = 12f
+        popup?.elevation = 12f
 
-        popup.showAtLocation(
+        popup?.showAtLocation(
             rootKeyboard,
             android.view.Gravity.CENTER,
             0,
@@ -959,5 +969,6 @@ class ClipboardKeyboard : InputMethodService() {
         }
     }
 }
+
 
 
