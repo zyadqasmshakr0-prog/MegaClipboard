@@ -269,7 +269,7 @@ class ClipboardKeyboard : InputMethodService() {
             "🇺🇸 English QWERTY"
         )
 
-        AlertDialog.Builder(this)
+        android.app.AlertDialog.Builder(this)
             .setTitle("إعدادات لوحة المفاتيح")
             .setSingleChoiceItems(
                 names,
@@ -867,3 +867,4 @@ class ClipboardKeyboard : InputMethodService() {
         }
     }
 }
+
