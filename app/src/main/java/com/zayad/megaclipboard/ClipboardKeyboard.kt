@@ -263,40 +263,132 @@ class ClipboardKeyboard : InputMethodService() {
 
     private fun openKeyboardSettings() {
 
-        val names = arrayOf(
+        val popupLayout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(24, 20, 24, 20)
+            setBackgroundColor(
+                when (currentThemeIndex) {
+                    1 -> Color.WHITE
+                    else -> Color.parseColor("#252525")
+                }
+            )
+        }
+
+        val title = Button(this).apply {
+            text = "⚙️ إعدادات التخطيط"
+            isAllCaps = false
+            setTextColor(
+                if (currentThemeIndex == 1) Color.BLACK else Color.WHITE
+            )
+            setBackgroundColor(Color.TRANSPARENT)
+            textSize = 18f
+        }
+
+        popupLayout.addView(
+            title,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        )
+
+        val names = listOf(
             "🇾🇪 عربي قياسي",
             "⚡ عربي سريع",
             "🇺🇸 English QWERTY"
         )
 
-        android.app.AlertDialog.Builder(this)
-            .setTitle("إعدادات لوحة المفاتيح")
-            .setSingleChoiceItems(
-                names,
-                currentLayoutIndex
-            ) { dialog, which ->
+        names.forEachIndexed { index, name ->
 
-                currentLayoutIndex = which
+            val button = Button(this).apply {
+                text = if (index == currentLayoutIndex)
+                    "✓ $name"
+                else
+                    name
 
-                prefs().edit()
-                    .putInt(
-                        "keyboard_layout",
-                        currentLayoutIndex
-                    )
-                    .apply()
+                isAllCaps = false
 
-                numberMode = false
-                shiftMode = false
+                setTextColor(
+                    if (currentThemeIndex == 1)
+                        Color.BLACK
+                    else
+                        Color.WHITE
+                )
 
-                generateKeyboardLayout()
+                setBackgroundColor(
+                    if (index == currentLayoutIndex)
+                        Color.parseColor("#1565C0")
+                    else
+                        Color.TRANSPARENT
+                )
 
-                dialog.dismiss()
+                setOnClickListener {
+
+                    currentLayoutIndex = index
+
+                    prefs().edit()
+                        .putInt(
+                            "keyboard_layout",
+                            currentLayoutIndex
+                        )
+                        .apply()
+
+                    numberMode = false
+                    shiftMode = false
+
+                    generateKeyboardLayout()
+
+                    popup.dismiss()
+                }
             }
-            .setNegativeButton(
-                "إلغاء",
-                null
+
+            popupLayout.addView(
+                button,
+                LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+                )
             )
-            .show()
+        }
+
+        val cancel = Button(this).apply {
+            text = "إلغاء"
+            isAllCaps = false
+
+            setOnClickListener {
+                popup.dismiss()
+            }
+        }
+
+        popupLayout.addView(
+            cancel,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        )
+
+        val popup = android.widget.PopupWindow(
+            popupLayout,
+            (resources.displayMetrics.widthPixels * 0.88f).toInt(),
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            true
+        )
+
+        popup.setBackgroundDrawable(
+            android.graphics.drawable.ColorDrawable(
+                Color.TRANSPARENT
+            )
+        )
+
+        popup.elevation = 12f
+
+        popup.showAtLocation(
+            rootKeyboard,
+            android.view.Gravity.CENTER,
+            0,
+            0
+        )
     }
 
     private fun cycleKeyboardLayout() {
@@ -867,4 +959,5 @@ class ClipboardKeyboard : InputMethodService() {
         }
     }
 }
+
 
