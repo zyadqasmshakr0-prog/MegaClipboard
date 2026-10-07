@@ -261,241 +261,23 @@ class ClipboardKeyboard : InputMethodService() {
     }
 
     private fun openKeyboardSettings() {
-
-        val popupLayout =
-            LinearLayout(this).apply {
-
-                orientation =
-                    LinearLayout.VERTICAL
-
-                setPadding(
-                    20,
-                    16,
-                    20,
-                    16
-                )
-
-                setBackgroundColor(
-                    when (currentThemeIndex) {
-                        1 -> Color.WHITE
-                        else -> Color.parseColor("#252525")
-                    }
-                )
-            }
-
-        val title =
-            Button(this).apply {
-
-                text =
-                    "⚙️ ترتيب حروف الكيبورد"
-
-                isAllCaps = false
-
-                setTextColor(
-                    if (currentThemeIndex == 1)
-                        Color.BLACK
-                    else
-                        Color.WHITE
-                )
-
-                setBackgroundColor(
-                    Color.TRANSPARENT
-                )
-
-                textSize = 18f
-            }
-
-        popupLayout.addView(title)
-
-        var popup:
-            android.widget.PopupWindow? = null
-
-        val names =
-            KeyboardLayoutManager.getNames()
-
-        names.forEachIndexed {
-            index,
-            name ->
-
-            val button =
-                Button(this).apply {
-
-                    text =
-                        if (
-                            index ==
-                            currentLayoutIndex
-                        ) {
-                            "✓ $name"
-                        } else {
-                            name
-                        }
-
-                    isAllCaps = false
-
-                    setTextColor(
-                        if (currentThemeIndex == 1)
-                            Color.BLACK
-                        else
-                            Color.WHITE
-                    )
-
-                    setBackgroundColor(
-                        if (
-                            index ==
-                            currentLayoutIndex
-                        ) {
-                            Color.parseColor(
-                                "#1565C0"
-                            )
-                        } else {
-                            Color.TRANSPARENT
-                        }
-                    )
-
-                    setOnClickListener {
-
-                        currentLayoutIndex =
-                            index
-
-                        prefs().edit()
-                            .putInt(
-                                "keyboard_layout",
-                                currentLayoutIndex
-                            )
-                            .apply()
-
-                        numberMode = false
-                        shiftMode = false
-
-                        generateKeyboardLayout()
-
-                        popup?.dismiss()
-                    }
-                }
-
-            popupLayout.addView(
-                button,
-                LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT
-                )
-            )
+        try {
+            // 1. إخفاء الكيبورد فوراً لتوفير مساحة للشاشة
+            requestHideSelf(0)
+            
+            // 2. إطلاق التطبيق الأساسي
+            val intent = android.content.Intent(this, Class.forName("com.zayad.megaclipboard.MainActivity"))
+            intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            
+            // 3. إرسال إشارة للتطبيق بأنه تم فتحه من الكيبورد للذهاب لتبويب الخرائط
+            intent.putExtra("OPEN_FROM_KEYBOARD", true)
+            intent.putExtra("TARGET_TAB", "KEYBOARD_LAYOUTS")
+            
+            startActivity(intent)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            android.widget.Toast.makeText(this, "تعذر فتح واجهة التطبيق", android.widget.Toast.LENGTH_SHORT).show()
         }
-
-        val customButton =
-            Button(this).apply {
-
-                text =
-                    "✋ إنشاء ترتيبي الخاص"
-
-                isAllCaps = false
-
-                setTextColor(
-                    if (currentThemeIndex == 1)
-                        Color.BLACK
-                    else
-                        Color.WHITE
-                )
-
-                setOnClickListener {
-
-                    popup?.dismiss()
-
-                    openCustomLayoutEditor()
-                }
-            }
-
-        popupLayout.addView(
-            customButton,
-            LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            )
-        )
-
-        val reset =
-            Button(this).apply {
-
-                text =
-                    "↩️ استعادة ترتيبي الخاص"
-
-                isAllCaps = false
-
-                setOnClickListener {
-
-                    KeyboardLayoutManager
-                        .resetCustom(prefs())
-
-                    currentLayoutIndex =
-                        0
-
-                    prefs().edit()
-                        .putInt(
-                            "keyboard_layout",
-                            0
-                        )
-                        .apply()
-
-                    generateKeyboardLayout()
-
-                    popup?.dismiss()
-                }
-            }
-
-        popupLayout.addView(
-            reset,
-            LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            )
-        )
-
-        val cancel =
-            Button(this).apply {
-
-                text = "إلغاء"
-                isAllCaps = false
-
-                setOnClickListener {
-                    popup?.dismiss()
-                }
-            }
-
-        popupLayout.addView(
-            cancel,
-            LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            )
-        )
-
-        popup =
-            android.widget.PopupWindow(
-                popupLayout,
-                (
-                    resources
-                        .displayMetrics
-                        .widthPixels *
-                    0.90f
-                ).toInt(),
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                true
-            )
-
-        popup?.setBackgroundDrawable(
-            android.graphics.drawable.ColorDrawable(
-                Color.TRANSPARENT
-            )
-        )
-
-        popup?.elevation = 12f
-
-        popup?.showAtLocation(
-            rootKeyboard,
-            android.view.Gravity.CENTER,
-            0,
-            0
-        )
     }
 
     private fun openCustomLayoutEditor() {
@@ -1307,6 +1089,7 @@ class ClipboardKeyboard : InputMethodService() {
             dp * resources.displayMetrics.density
         ).toInt()
     }}
+
 
 
 
