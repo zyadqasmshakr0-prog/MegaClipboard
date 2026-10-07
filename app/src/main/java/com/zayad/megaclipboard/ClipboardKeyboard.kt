@@ -663,6 +663,171 @@ class ClipboardKeyboard : InputMethodService() {
         )
     }
 
+    private fun openCustomLayoutEditor() {
+
+        val editor =
+            KeyboardLayoutEditorView(
+                this,
+                KeyboardLayoutManager
+                    .getCustom(prefs())
+            )
+
+        val title =
+            Button(this).apply {
+
+                text =
+                    "✋ اسحب الحروف لتغيير أماكنها"
+
+                isAllCaps = false
+
+                setTextColor(
+                    Color.WHITE
+                )
+
+                setBackgroundColor(
+                    Color.TRANSPARENT
+                )
+
+                textSize = 17f
+            }
+
+        val save =
+            Button(this).apply {
+
+                text =
+                    "💾 حفظ الترتيب"
+
+                isAllCaps = false
+
+                setTextColor(
+                    Color.WHITE
+                )
+
+                setBackgroundColor(
+                    Color.parseColor(
+                        "#1565C0"
+                    )
+                )
+            }
+
+        val cancel =
+            Button(this).apply {
+
+                text = "إلغاء"
+                isAllCaps = false
+            }
+
+        val box =
+            LinearLayout(this).apply {
+
+                orientation =
+                    LinearLayout.VERTICAL
+
+                setPadding(
+                    12,
+                    12,
+                    12,
+                    12
+                )
+
+                setBackgroundColor(
+                    Color.parseColor(
+                        "#202020"
+                    )
+                )
+            }
+
+        box.addView(
+            title,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dpToPx(50)
+            )
+        )
+
+        box.addView(
+            editor,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dpToPx(210)
+            )
+        )
+
+        box.addView(
+            save,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dpToPx(50)
+            )
+        )
+
+        box.addView(
+            cancel,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dpToPx(50)
+            )
+        )
+
+        val editorPopup =
+            android.widget.PopupWindow(
+                box,
+                (
+                    resources
+                        .displayMetrics
+                        .widthPixels *
+                    0.94f
+                ).toInt(),
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                true
+            )
+
+        editorPopup.setBackgroundDrawable(
+            android.graphics.drawable.ColorDrawable(
+                Color.TRANSPARENT
+            )
+        )
+
+        editorPopup.elevation = 14f
+
+        save.setOnClickListener {
+
+            KeyboardLayoutManager
+                .saveCustom(
+                    prefs(),
+                    editor.getItems()
+                )
+
+            currentLayoutIndex =
+                KeyboardLayoutManager.CUSTOM_INDEX
+
+            numberMode = false
+            shiftMode = false
+
+            prefs().edit()
+                .putInt(
+                    "keyboard_layout",
+                    currentLayoutIndex
+                )
+                .apply()
+
+            generateKeyboardLayout()
+
+            editorPopup.dismiss()
+        }
+
+        cancel.setOnClickListener {
+            editorPopup.dismiss()
+        }
+
+        editorPopup.showAtLocation(
+            rootKeyboard,
+            android.view.Gravity.CENTER,
+            0,
+            0
+        )
+    }
+
     private fun cycleKeyboardLayout() {
 
         currentLayoutIndex =
@@ -1302,6 +1467,7 @@ class ClipboardKeyboard : InputMethodService() {
         }
     }
 }
+
 
 
 
