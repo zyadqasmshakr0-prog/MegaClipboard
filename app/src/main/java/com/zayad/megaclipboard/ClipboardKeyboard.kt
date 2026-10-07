@@ -262,58 +262,32 @@ class ClipboardKeyboard : InputMethodService() {
 
     private fun openKeyboardSettings() {
 
-        val popupLayout = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(24, 20, 24, 20)
+        val popupLayout =
+            LinearLayout(this).apply {
 
-            setBackgroundColor(
-                when (currentThemeIndex) {
-                    1 -> Color.WHITE
-                    else -> Color.parseColor("#252525")
-                }
-            )
-        }
+                orientation =
+                    LinearLayout.VERTICAL
 
-        val title = Button(this).apply {
-            text = "⚙️ إعدادات التخطيط"
-            isAllCaps = false
+                setPadding(
+                    20,
+                    16,
+                    20,
+                    16
+                )
 
-            setTextColor(
-                if (currentThemeIndex == 1)
-                    Color.BLACK
-                else
-                    Color.WHITE
-            )
+                setBackgroundColor(
+                    when (currentThemeIndex) {
+                        1 -> Color.WHITE
+                        else -> Color.parseColor("#252525")
+                    }
+                )
+            }
 
-            setBackgroundColor(Color.TRANSPARENT)
-            textSize = 18f
-        }
-
-        popupLayout.addView(
-            title,
-            LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            )
-        )
-
-        var popup: android.widget.PopupWindow? = null
-
-        val names = listOf(
-            "🇾🇪 عربي قياسي",
-            "⚡ عربي سريع",
-            "🇺🇸 English QWERTY"
-        )
-
-        names.forEachIndexed { index, name ->
-
-            val button = Button(this).apply {
+        val title =
+            Button(this).apply {
 
                 text =
-                    if (index == currentLayoutIndex)
-                        "✓ $name"
-                    else
-                        name
+                    "⚙️ ترتيب حروف الكيبورد"
 
                 isAllCaps = false
 
@@ -325,31 +299,79 @@ class ClipboardKeyboard : InputMethodService() {
                 )
 
                 setBackgroundColor(
-                    if (index == currentLayoutIndex)
-                        Color.parseColor("#1565C0")
-                    else
-                        Color.TRANSPARENT
+                    Color.TRANSPARENT
                 )
 
-                setOnClickListener {
-
-                    currentLayoutIndex = index
-
-                    prefs().edit()
-                        .putInt(
-                            "keyboard_layout",
-                            currentLayoutIndex
-                        )
-                        .apply()
-
-                    numberMode = false
-                    shiftMode = false
-
-                    generateKeyboardLayout()
-
-                    popup?.dismiss()
-                }
+                textSize = 18f
             }
+
+        popupLayout.addView(title)
+
+        var popup:
+            android.widget.PopupWindow? = null
+
+        val names =
+            KeyboardLayoutManager.getNames()
+
+        names.forEachIndexed {
+            index,
+            name ->
+
+            val button =
+                Button(this).apply {
+
+                    text =
+                        if (
+                            index ==
+                            currentLayoutIndex
+                        ) {
+                            "✓ $name"
+                        } else {
+                            name
+                        }
+
+                    isAllCaps = false
+
+                    setTextColor(
+                        if (currentThemeIndex == 1)
+                            Color.BLACK
+                        else
+                            Color.WHITE
+                    )
+
+                    setBackgroundColor(
+                        if (
+                            index ==
+                            currentLayoutIndex
+                        ) {
+                            Color.parseColor(
+                                "#1565C0"
+                            )
+                        } else {
+                            Color.TRANSPARENT
+                        }
+                    )
+
+                    setOnClickListener {
+
+                        currentLayoutIndex =
+                            index
+
+                        prefs().edit()
+                            .putInt(
+                                "keyboard_layout",
+                                currentLayoutIndex
+                            )
+                            .apply()
+
+                        numberMode = false
+                        shiftMode = false
+
+                        generateKeyboardLayout()
+
+                        popup?.dismiss()
+                    }
+                }
 
             popupLayout.addView(
                 button,
@@ -360,15 +382,84 @@ class ClipboardKeyboard : InputMethodService() {
             )
         }
 
-        val cancel = Button(this).apply {
+        val customButton =
+            Button(this).apply {
 
-            text = "إلغاء"
-            isAllCaps = false
+                text =
+                    "✋ إنشاء ترتيبي الخاص"
 
-            setOnClickListener {
-                popup?.dismiss()
+                isAllCaps = false
+
+                setTextColor(
+                    if (currentThemeIndex == 1)
+                        Color.BLACK
+                    else
+                        Color.WHITE
+                )
+
+                setOnClickListener {
+
+                    popup?.dismiss()
+
+                    openCustomLayoutEditor()
+                }
             }
-        }
+
+        popupLayout.addView(
+            customButton,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        )
+
+        val reset =
+            Button(this).apply {
+
+                text =
+                    "↩️ استعادة ترتيبي الخاص"
+
+                isAllCaps = false
+
+                setOnClickListener {
+
+                    KeyboardLayoutManager
+                        .resetCustom(prefs())
+
+                    currentLayoutIndex =
+                        0
+
+                    prefs().edit()
+                        .putInt(
+                            "keyboard_layout",
+                            0
+                        )
+                        .apply()
+
+                    generateKeyboardLayout()
+
+                    popup?.dismiss()
+                }
+            }
+
+        popupLayout.addView(
+            reset,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        )
+
+        val cancel =
+            Button(this).apply {
+
+                text = "إلغاء"
+                isAllCaps = false
+
+                setOnClickListener {
+                    popup?.dismiss()
+                }
+            }
 
         popupLayout.addView(
             cancel,
@@ -378,12 +469,18 @@ class ClipboardKeyboard : InputMethodService() {
             )
         )
 
-        popup = android.widget.PopupWindow(
-            popupLayout,
-            (resources.displayMetrics.widthPixels * 0.88f).toInt(),
-            ViewGroup.LayoutParams.WRAP_CONTENT,
-            true
-        )
+        popup =
+            android.widget.PopupWindow(
+                popupLayout,
+                (
+                    resources
+                        .displayMetrics
+                        .widthPixels *
+                    0.90f
+                ).toInt(),
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                true
+            )
 
         popup?.setBackgroundDrawable(
             android.graphics.drawable.ColorDrawable(
@@ -401,10 +498,177 @@ class ClipboardKeyboard : InputMethodService() {
         )
     }
 
+    private fun openCustomLayoutEditor() {
+
+        val editor =
+            KeyboardLayoutEditorView(
+                this,
+                KeyboardLayoutManager
+                    .getCustom(prefs())
+            )
+
+        val title =
+            Button(this).apply {
+
+                text =
+                    "✋ اسحب الحروف لتغيير أماكنها"
+
+                isAllCaps = false
+
+                setTextColor(
+                    Color.WHITE
+                )
+
+                setBackgroundColor(
+                    Color.TRANSPARENT
+                )
+
+                textSize = 17f
+            }
+
+        val save =
+            Button(this).apply {
+
+                text =
+                    "💾 حفظ الترتيب"
+
+                isAllCaps = false
+
+                setTextColor(
+                    Color.WHITE
+                )
+
+                setBackgroundColor(
+                    Color.parseColor(
+                        "#1565C0"
+                    )
+                )
+            }
+
+        val cancel =
+            Button(this).apply {
+
+                text = "إلغاء"
+                isAllCaps = false
+            }
+
+        val box =
+            LinearLayout(this).apply {
+
+                orientation =
+                    LinearLayout.VERTICAL
+
+                setPadding(
+                    12,
+                    12,
+                    12,
+                    12
+                )
+
+                setBackgroundColor(
+                    Color.parseColor(
+                        "#202020"
+                    )
+                )
+            }
+
+        box.addView(
+            title,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dpToPx(50)
+            )
+        )
+
+        box.addView(
+            editor,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dpToPx(210)
+            )
+        )
+
+        box.addView(
+            save,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dpToPx(50)
+            )
+        )
+
+        box.addView(
+            cancel,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                dpToPx(50)
+            )
+        )
+
+        val editorPopup =
+            android.widget.PopupWindow(
+                box,
+                (
+                    resources
+                        .displayMetrics
+                        .widthPixels *
+                    0.94f
+                ).toInt(),
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                true
+            )
+
+        editorPopup.setBackgroundDrawable(
+            android.graphics.drawable.ColorDrawable(
+                Color.TRANSPARENT
+            )
+        )
+
+        editorPopup.elevation = 14f
+
+        save.setOnClickListener {
+
+            KeyboardLayoutManager
+                .saveCustom(
+                    prefs(),
+                    editor.getItems()
+                )
+
+            currentLayoutIndex =
+                KeyboardLayoutManager.CUSTOM_INDEX
+
+            numberMode = false
+            shiftMode = false
+
+            prefs().edit()
+                .putInt(
+                    "keyboard_layout",
+                    currentLayoutIndex
+                )
+                .apply()
+
+            generateKeyboardLayout()
+
+            editorPopup.dismiss()
+        }
+
+        cancel.setOnClickListener {
+            editorPopup.dismiss()
+        }
+
+        editorPopup.showAtLocation(
+            rootKeyboard,
+            android.view.Gravity.CENTER,
+            0,
+            0
+        )
+    }
+
     private fun cycleKeyboardLayout() {
 
         currentLayoutIndex =
-            (currentLayoutIndex + 1) % 3
+            (
+                currentLayoutIndex + 1
+            ) % 12
 
         prefs().edit()
             .putInt(
@@ -428,62 +692,53 @@ class ClipboardKeyboard : InputMethodService() {
             return
         }
 
-        val rows: List<List<String>> =
-            when (currentLayoutIndex) {
+        val rows:
+            List<List<String>> =
 
-                0 -> listOf(
-                    listOf(
-                        "ض","ص","ث","ق","ف","غ",
-                        "ع","ه","خ","ح","ج","د"
-                    ),
-                    listOf(
-                        "ش","س","ي","ب","ل","ا",
-                        "ت","ن","م","ك","ط"
-                    ),
-                    listOf(
-                        "⇧","ئ","ء","ؤ","ر","لا",
-                        "ى","ة","و","ز","ظ","⌫"
-                    ),
-                    listOf(
-                        "?123","🌐","☺","مسافة",".","↵"
-                    )
-                )
+            when {
 
-                1 -> listOf(
-                    listOf(
-                        "ق","و","ع","ر","ت","ي",
-                        "ب","ل","ا","د","س","م"
-                    ),
-                    listOf(
-                        "ن","ك","ط","ح","ض","ص",
-                        "ث","خ","ج","ف","غ"
-                    ),
-                    listOf(
-                        "⇧","ش","ه","ة","و","ز",
-                        "ظ","ذ","ء","ئ","⌫"
-                    ),
-                    listOf(
-                        "?123","🌐","☺","مسافة",".","↵"
-                    )
-                )
+                currentLayoutIndex in 0..9 ->
 
-                else -> listOf(
+                    KeyboardLayoutManager
+                        .getRows(
+                            currentLayoutIndex,
+                            prefs()
+                        )
+
+                currentLayoutIndex ==
+                    KeyboardLayoutManager.CUSTOM_INDEX ->
+
+                    KeyboardLayoutManager
+                        .getRows(
+                            KeyboardLayoutManager.CUSTOM_INDEX,
+                            prefs()
+                        )
+
+                else -> {
+
                     listOf(
-                        "q","w","e","r","t","y",
-                        "u","i","o","p"
-                    ),
-                    listOf(
-                        "a","s","d","f","g","h",
-                        "j","k","l"
-                    ),
-                    listOf(
-                        "⇧","z","x","c","v","b",
-                        "n","m","⌫"
-                    ),
-                    listOf(
-                        "?123","🌐","☺","مسافة",".","↵"
+                        listOf(
+                            "q","w","e","r","t",
+                            "y","u","i","o","p"
+                        ),
+                        listOf(
+                            "a","s","d","f","g",
+                            "h","j","k","l"
+                        ),
+                        listOf(
+                            "⇧","z","x","c","v",
+                            "b","n","m","⌫"
+                        ),
+                        listOf(
+                            "?123",
+                            "🌐",
+                            "☺",
+                            "مسافة",
+                            ".",
+                            "↵"
+                        )
                     )
-                )
+                }
             }
 
         rows.forEach { row ->
@@ -513,6 +768,54 @@ class ClipboardKeyboard : InputMethodService() {
             layoutKeysContainer?.addView(
                 rowLayout
             )
+        }
+
+        // إضافة أزرار التحكم إلى التخطيطات العربية
+        if (
+            currentLayoutIndex in 0..9 ||
+            currentLayoutIndex ==
+            KeyboardLayoutManager.CUSTOM_INDEX
+        ) {
+
+            val rowsContainer =
+                layoutKeysContainer
+
+            val existing =
+                rowsContainer?.getChildAt(2)
+
+            if (existing is LinearLayout) {
+
+                val third =
+                    existing
+
+                third.removeAllViews()
+
+                val letters =
+                    KeyboardLayoutManager
+                        .getRows(
+                            currentLayoutIndex,
+                            prefs()
+                        )[2]
+
+                third.removeAllViews()
+
+                createKeyButton(
+                    third,
+                    "⇧"
+                )
+
+                letters.forEach { key ->
+                    createKeyButton(
+                        third,
+                        key
+                    )
+                }
+
+                createKeyButton(
+                    third,
+                    "⌫"
+                )
+            }
         }
     }
 
@@ -569,9 +872,19 @@ class ClipboardKeyboard : InputMethodService() {
 
         val bgColor =
             when (currentThemeIndex) {
-                0 -> Color.parseColor("#333333")
-                1 -> Color.WHITE
-                else -> Color.parseColor("#1565C0")
+
+                0 ->
+                    Color.parseColor(
+                        "#333333"
+                    )
+
+                1 ->
+                    Color.WHITE
+
+                else ->
+                    Color.parseColor(
+                        "#1565C0"
+                    )
             }
 
         val textColor =
@@ -583,25 +896,33 @@ class ClipboardKeyboard : InputMethodService() {
         val shownKey =
             displayKey(key)
 
-        val btn =
-            Button(this).apply {
+        val keyView =
+            FastKeyView(this).apply {
 
                 text = shownKey
-                isAllCaps = false
 
-                setBackgroundColor(
-                    bgColor
-                )
-
-                setTextColor(
+                this.textColor =
                     textColor
-                )
 
-                setPadding(
-                    0,0,0,0
-                )
+                keyColor =
+                    bgColor
+
+                pressedKeyColor =
+                    when (currentThemeIndex) {
+                        1 ->
+                            Color.parseColor(
+                                "#D0D0D0"
+                            )
+
+                        else ->
+                            Color.parseColor(
+                                "#555555"
+                            )
+                    }
 
                 textSize = 17f
+
+                enableKeyHaptic = true
             }
 
         var weight = 1f
@@ -629,28 +950,40 @@ class ClipboardKeyboard : InputMethodService() {
             )
 
         params.setMargins(
-            3,3,3,3
+            3,
+            3,
+            3,
+            3
         )
 
-        btn.layoutParams = params
+        keyView.layoutParams =
+            params
 
-        btn.setOnClickListener {
+        keyView.setOnClickListener {
             handleKey(key)
         }
 
-        rowLayout.addView(btn)
+        rowLayout.addView(
+            keyView
+        )
     }
 
-    private fun displayKey(key: String): String {
+    private fun displayKey(
+        key: String
+    ): String {
 
         if (
-            currentLayoutIndex == 2 &&
+            currentLayoutIndex ==
+            KeyboardLayoutManager.ENGLISH_INDEX &&
             !numberMode &&
             shiftMode &&
             key.length == 1 &&
             key[0].isLetter()
         ) {
-            return key.uppercase(Locale.US)
+
+            return key.uppercase(
+                Locale.US
+            )
         }
 
         return key
@@ -741,7 +1074,7 @@ class ClipboardKeyboard : InputMethodService() {
 
                 val text =
                     if (
-                        currentLayoutIndex == 2 &&
+                        currentLayoutIndex == KeyboardLayoutManager.ENGLISH_INDEX &&
                         shiftMode &&
                         key.length == 1
                     ) {
@@ -756,7 +1089,7 @@ class ClipboardKeyboard : InputMethodService() {
                 )
 
                 if (
-                    currentLayoutIndex == 2 &&
+                    currentLayoutIndex == KeyboardLayoutManager.ENGLISH_INDEX &&
                     shiftMode
                 ) {
                     shiftMode = false
@@ -969,6 +1302,7 @@ class ClipboardKeyboard : InputMethodService() {
         }
     }
 }
+
 
 
 
