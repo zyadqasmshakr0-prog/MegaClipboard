@@ -1,4 +1,4 @@
-﻿package com.zayad.megaclipboard
+package com.zayad.megaclipboard
 
 import android.content.ClipboardManager
 import android.content.Context
@@ -465,139 +465,20 @@ class ClipboardKeyboard : InputMethodService() {
         generateKeyboardLayout()
     }
 
-    private fun generateKeyboardLayout() {
-
+        private fun generateKeyboardLayout() {
         layoutKeysContainer?.removeAllViews()
-
         if (numberMode) {
             generateNumberLayout()
             return
         }
-
-        val rows:
-            List<List<String>> =
-
-            when {
-
-                currentLayoutIndex in 0..9 ->
-
-                    KeyboardLayoutManager
-                        .getRows(
-                            currentLayoutIndex,
-                            prefs()
-                        )
-
-                currentLayoutIndex ==
-                    KeyboardLayoutManager.CUSTOM_INDEX ->
-
-                    KeyboardLayoutManager
-                        .getRows(
-                            KeyboardLayoutManager.CUSTOM_INDEX,
-                            prefs()
-                        )
-
-                else -> {
-
-                    listOf(
-                        listOf(
-                            "q","w","e","r","t",
-                            "y","u","i","o","p"
-                        ),
-                        listOf(
-                            "a","s","d","f","g",
-                            "h","j","k","l"
-                        ),
-                        listOf(
-                            "⇧","z","x","c","v",
-                            "b","n","m","⌫"
-                        ),
-                        listOf(
-                            "?123",
-                            "🌐",
-                            "☺",
-                            "مسافة",
-                            ".",
-                            "↵"
-                        )
-                    )
-                }
-            }
-
+        val rows = KeyboardLayoutManager.getRows(currentLayoutIndex, prefs())
         rows.forEach { row ->
-
-            val rowLayout =
-                LinearLayout(this).apply {
-
-                    orientation =
-                        LinearLayout.HORIZONTAL
-
-                    layoutParams =
-                        LinearLayout.LayoutParams(
-                            ViewGroup.LayoutParams.MATCH_PARENT,
-                            0,
-                            1f
-                        )
-                }
-
-            row.forEach { key ->
-
-                createKeyButton(
-                    rowLayout,
-                    key
-                )
+            val rowLayout = android.widget.LinearLayout(this).apply {
+                orientation = android.widget.LinearLayout.HORIZONTAL
+                layoutParams = android.widget.LinearLayout.LayoutParams(android.view.ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
             }
-
-            layoutKeysContainer?.addView(
-                rowLayout
-            )
-        }
-
-        // إضافة أزرار التحكم إلى التخطيطات العربية
-        if (
-            currentLayoutIndex in 0..9 ||
-            currentLayoutIndex ==
-            KeyboardLayoutManager.CUSTOM_INDEX
-        ) {
-
-            val rowsContainer =
-                layoutKeysContainer
-
-            val existing =
-                rowsContainer?.getChildAt(2)
-
-            if (existing is LinearLayout) {
-
-                val third =
-                    existing
-
-                third.removeAllViews()
-
-                val letters =
-                    KeyboardLayoutManager
-                        .getRows(
-                            currentLayoutIndex,
-                            prefs()
-                        )[2]
-
-                third.removeAllViews()
-
-                createKeyButton(
-                    third,
-                    "⇧"
-                )
-
-                letters.forEach { key ->
-                    createKeyButton(
-                        third,
-                        key
-                    )
-                }
-
-                createKeyButton(
-                    third,
-                    "⌫"
-                )
-            }
+            row.forEach { key -> createKeyButton(rowLayout, key) }
+            layoutKeysContainer?.addView(rowLayout)
         }
     }
 
