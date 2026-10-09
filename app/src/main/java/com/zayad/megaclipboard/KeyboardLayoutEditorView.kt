@@ -96,6 +96,7 @@ class KeyboardLayoutEditorView(context: Context, initialItems: List<String>) : V
     override fun onTouchEvent(event: MotionEvent): Boolean {
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
+                parent?.requestDisallowInterceptTouchEvent(true)
                 draggedIndex = indexAt(event.x, event.y)
                 floatingX = event.x
                 floatingY = event.y
@@ -119,6 +120,7 @@ class KeyboardLayoutEditorView(context: Context, initialItems: List<String>) : V
                 }
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                parent?.requestDisallowInterceptTouchEvent(false)
                 dragging = false
                 invalidate()
             }
