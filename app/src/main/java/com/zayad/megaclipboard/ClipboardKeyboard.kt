@@ -843,7 +843,135 @@ class ClipboardKeyboard : InputMethodService() {
         return (
             dp * resources.displayMetrics.density
         ).toInt()
-    }}
+    }
+    override fun onStartInputView(info: android.view.inputmethod.EditorInfo?, restarting: Boolean) {
+        super.onStartInputView(info, restarting)
+        currentLayoutIndex = prefs().getInt("keyboard_layout", 0)
+        emojiMode = false
+        setCandidatesViewShown(true)
+        generateKeyboardLayout()
+    }
+
+    override fun onCreateCandidatesView(): android.view.View {
+        val bar = android.widget.LinearLayout(this).apply {
+            layoutParams = android.view.ViewGroup.LayoutParams(android.view.ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(45))
+            orientation = android.widget.LinearLayout.HORIZONTAL
+            setBackgroundColor(android.graphics.Color.parseColor("#151515"))
+        }
+        val suggestions = android.widget.TextView(this).apply {
+            layoutParams = android.widget.LinearLayout.LayoutParams(0, android.view.ViewGroup.LayoutParams.MATCH_PARENT, 1f)
+            text = "المقترحات..."
+            setTextColor(android.graphics.Color.GRAY)
+            gravity = android.view.Gravity.CENTER
+        }
+        bar.addView(suggestions)
+        val clipboardBtn = android.widget.Button(this).apply {
+            layoutParams = android.widget.LinearLayout.LayoutParams(android.view.ViewGroup.LayoutParams.WRAP_CONTENT, android.view.ViewGroup.LayoutParams.MATCH_PARENT)
+            text = "📋 الحافظة"
+            setTextColor(android.graphics.Color.WHITE)
+            setBackgroundColor(android.graphics.Color.TRANSPARENT)
+            setOnClickListener { android.widget.Toast.makeText(this@ClipboardKeyboard, "سيتم ربطها بمحرك C++", android.widget.Toast.LENGTH_SHORT).show() }
+        }
+        bar.addView(clipboardBtn)
+        return bar
+    }
+
+    private fun handleKey(key: String) {
+        val ic = currentInputConnection ?: return
+        when (key) {
+            "⌫" -> ic.deleteSurroundingText(1, 0)
+            "↵" -> {
+                ic.sendKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_ENTER))
+                ic.sendKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, android.view.KeyEvent.KEYCODE_ENTER))
+            }
+            "مسافة", " " -> ic.commitText(" ", 1)
+            "🌐" -> {
+                currentLayoutIndex = if (currentLayoutIndex == KeyboardLayoutManager.ENGLISH_INDEX) 0 else KeyboardLayoutManager.ENGLISH_INDEX
+                prefs().edit().putInt("keyboard_layout", currentLayoutIndex).apply()
+                emojiMode = false
+                generateKeyboardLayout()
+            }
+            "☺" -> {
+                emojiMode = true
+                generateKeyboardLayout()
+            }
+            "🔙 رجوع" -> {
+                emojiMode = false
+                generateKeyboardLayout()
+            }
+            "⚙️" -> {
+                requestHideSelf(0)
+                try {
+                    val intent = android.content.Intent(this, Class.forName("com.zayad.megaclipboard.MainActivity"))
+                    intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                    intent.putExtra("TARGET_TAB", "KEYBOARD_LAYOUTS")
+                    startActivity(intent)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+            else -> ic.commitText(key, 1)
+        }
+    }
+
+    private fun handleKeyPress(key: String) {
+        handleKey(key)
+    }
+
+    private fun generateKeyboardLayout() {
+        layoutKeysContainer?.removeAllViews()
+
+        if (emojiMode) {
+            val scrollView = android.widget.ScrollView(this).apply {
+                layoutParams = android.widget.LinearLayout.LayoutParams(android.view.ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(280))
+            }
+            val panel = android.widget.LinearLayout(this).apply {
+                orientation = android.widget.LinearLayout.VERTICAL
+                setPadding(0, 5, 0, 10)
+            }
+            val backRow = android.widget.LinearLayout(this).apply {
+                orientation = android.widget.LinearLayout.HORIZONTAL
+                layoutParams = android.widget.LinearLayout.LayoutParams(android.view.ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(50))
+            }
+            createKeyButton(backRow, "🔙 رجوع")
+            panel.addView(backRow)
+
+            val emojis = listOf(
+                "😂","❤️","😍","🤣","😊","🙏","💕","😭","😘","👍","🔥","🥰","😁","✨","🥺","😅","😎","🙌","🎉","✅","🤔","🌹","💔","😉","🤦‍♂️","🎶","👀","🤷‍♂️","😴","🤝","✌️",
+                "😆","😋","😜","🤪","😝","🤑","🤗","🤭","🤫","🤔","🤐","🤨","😐","😑","😶","😏","😒","🙄","😬","🤥","😌","😔","😪","🤤","😷","🤒","🤕","🤢","🤮","🤧","🥵","🥶","🥴","😵","🤯","🤠","🥳","😎","🤓","🧐","😕","😟","🙁","☹️","😮","😯","😲","😳","🥺","😦","😧","😨","😰","😥","😢","😭","😱","😖","😣","😞","😓","😩","😫","🥱","😤","😡","😠","🤬","😈","👿","💀","☠️","💩","🤡","👹","👺","👻","👽","👾","🤖","😺","😸","😹","😻","😼","😽","🙀","😿","😾","🙈","🙉","🙊",
+                "🐶","🐱","🐭","🐹","🐰","🦊","🐻","🐼","🐨","🐯","🦁","🐮","🐷","🐸","🐵","🐔","🐧","🐦","🐤","🐺","🐗","🐴","🦄","🐝","🐛","🦋","🐌","🐞","🐜","🦟","🦗","🕷️","🦂","🐢","🐍","🦎","🦖","🦕","🐙","🦑","🦐","🦞","🦀","🐡","🐠","🐟","🐬","🐳","🐋","🦈","🐊","🐅","🐆","🦓","🦍","🦧","🐘","🦛","🦏","🐪","🐫","🦒","🦘","🐃","🐂","🐄","🐎","🐖","🐏","🐑","🦙","🐐","🦌","🐕","🐩","🦮","🐕‍🦺","🐈","🐓","🦃","🦚","🦜","🦢","🦩","🕊️","🐇","🦝","🦨","🦡","🦦","🦥","🐁","🐀","🐿️","🦔",
+                "🍏","🍎","🍐","🍊","🍋","🍌","🍉","🍇","🍓","🍈","🍒","🍑","🥭","🍍","🥥","🥝","🍅","🍆","🥑","🥦","🥬","🥒","🌶️","🌽","🥕","🧄","🧅","🥔","🍠","🥐","🥯","🍞","🥖","🥨","🧀","🥚","🍳","🧈","🥞","🧇","🥓","🥩","🍗","🍖","🌭","🍔","🍟","🍕","🥪","🥙","🧆","🌮","🌯","🥗","🥘","🥫","🍝","🍜","🍲","🍛","🍣","🍱","🥟","🦪","🍤","🍙","🍚","🍘","🍥","🥠","🥮","🍢","🍡","🍧","🍨","🍦","🥧","🧁","🍰","🎂","🍮","🍭","🍬","🍫","🍿","🍩","🍪","🌰","🥜","🍯","🥛","🍼","☕","🍵","🧃","🥤","🍶","🍺","🍻","🥂","🍷","🥃","🍸","🍹","🧉","🍾","🧊","🥄","🍴","🍽️","🥣","🥡","🥢","🧂"
+            )
+            
+            emojis.chunked(8).forEach { chunk ->
+                val r = android.widget.LinearLayout(this).apply {
+                    orientation = android.widget.LinearLayout.HORIZONTAL
+                    layoutParams = android.widget.LinearLayout.LayoutParams(android.view.ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(48))
+                }
+                chunk.forEach { em -> createKeyButton(r, em) }
+                panel.addView(r)
+            }
+            scrollView.addView(panel)
+            layoutKeysContainer?.addView(scrollView)
+            return
+        }
+
+        if (numberMode) {
+            generateNumberLayout()
+            return
+        }
+
+        val rows = KeyboardLayoutManager.getRows(currentLayoutIndex, prefs())
+        rows.forEach { row ->
+            val rowLayout = android.widget.LinearLayout(this).apply {
+                orientation = android.widget.LinearLayout.HORIZONTAL
+                layoutParams = android.widget.LinearLayout.LayoutParams(android.view.ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
+            }
+            row.forEach { key -> createKeyButton(rowLayout, key) }
+            layoutKeysContainer?.addView(rowLayout)
+        }
+    }
+}
 
 
 
