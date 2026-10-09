@@ -2,44 +2,50 @@ package com.zayad.megaclipboard
 import android.content.SharedPreferences
 
 object KeyboardLayoutManager {
-    // تم تصحيح الفهرسة برمجياً لضمان عمل كافة الخرائط بشكل مثالي
-    const val ENGLISH_INDEX = 2
-    const val CUSTOM_INDEX = 3
+    const val ENGLISH_INDEX = 10
+    const val CUSTOM_INDEX = 11
     private const val PREF_CUSTOM = "custom_arabic_keyboard_layout"
+
+    private val base = listOf(
+        "ض","ص","ث","ق","ف","غ","ع","ه","خ","ح","ج","د",
+        "ش","س","ي","ب","ل","ا","ت","ن","م","ك","ط",
+        "ئ","ء","ؤ","ر","لا","ى","ة","و","ز","ظ"
+    )
     
-    private val base = listOf("ض","ص","ث","ق","ف","غ","ع","ه","خ","ح","ج","د","ش","س","ي","ب","ل","ا","ت","ن","م","ك","ط","ئ","ء","ؤ","ر","لا","ى","ة","و","ز","ظ")
-    private val baseCustom = listOf("ض","ص","ث","ق","ف","غ","ع","ه","خ","ح","ج","د","ش","س","ي","ب","ل","ا","ت","ن","م","ك","ط","⌫","⇧","ئ","ء","ؤ","ر","لا","ى","ة","و","ز","ظ","↵","?123","🌐","☺","مسافة",".",",")
-    
+    private val baseCustom = listOf(
+        "ض","ص","ث","ق","ف","غ","ع","ه","خ","ح","ج","د",
+        "ش","س","ي","ب","ل","ا","ت","ن","م","ك","ط","⌫",
+        "⇧","ئ","ء","ؤ","ر","لا","ى","ة","و","ز","ظ","↵",
+        "?123","🌐","☺","مسافة",".",","
+    )
+
     fun getName(index: Int): String {
         return when (index) {
-            0 -> "🇾🇪 العربي القياسي (12 حرف)"
-            1 -> "📱 كيبورد جوجل المألوف (نفس الصورة)"
-            2 -> "🇺🇸 English QWERTY"
-            3 -> "✋ ترتيبي الخاص (مفتوح بالكامل)"
-            4 -> "😀 إيموجي (وجوه ومشاعر)"
-            5 -> "🍕 إيموجي (أشياء وحيوانات)"
-            6 -> "🎉 إيموجي (أعلام ورموز)"
+            0 -> "🇾🇪 العربي القياسي (كيبورد Gboard)"
+            1 -> "⚡ العربي السريع"
+            10 -> "🇺🇸 English QWERTY"
+            11 -> "✋ ترتيبي الخاص"
             else -> "تخطيط $index"
         }
     }
-    
-    fun getNames(): List<String> = (0..6).map { getName(it) }
-    
+
+    fun getNames(): List<String> = listOf(getName(0), getName(1), getName(10), getName(11))
+
     fun getCustom(prefs: SharedPreferences): List<String> {
         val saved = prefs.getString(PREF_CUSTOM, null)
         if (saved.isNullOrBlank()) return baseCustom
         val result = saved.split("|").filter { it.isNotEmpty() }
         return if (result.size == baseCustom.size) result else baseCustom
     }
-    
+
     fun saveCustom(prefs: SharedPreferences, layout: List<String>) {
         prefs.edit().putString(PREF_CUSTOM, layout.joinToString("|")).apply()
     }
-    
+
     fun resetCustom(prefs: SharedPreferences) {
         prefs.edit().remove(PREF_CUSTOM).apply()
     }
-    
+
     fun getRows(index: Int, prefs: SharedPreferences): List<List<String>> {
         if (index == CUSTOM_INDEX) {
             val c = getCustom(prefs)
@@ -53,44 +59,18 @@ object KeyboardLayoutManager {
                 listOf("?123","🌐","☺","مسافة",".","↵")
             )
         }
-        if (index == 1) { // التخطيط المألوف كما في الصورة تماماً
-            return listOf(
-                listOf("ض","ص","ث","ق","ف","غ","ع","ه","خ","ح","ج"),
-                listOf("ش","س","ي","ب","ل","ا","ت","ن","م","ك","ط"),
-                listOf("ذ","ء","ؤ","ر","ى","ة","و","ز","ظ","د","⌫"),
-                listOf("?123","🌐","☺","مسافة",".","↵")
-            )
-        }
-        if (index == 4) { // Emoji Faces
-            return listOf(
-                listOf("😂","❤️","😍","🤣","😊","🙏","💕","😭","😘","👍","🔥"),
-                listOf("🥰","😁","✨","🥺","😅","😎","🙌","🎉","✅","🤔","🌹"),
-                listOf("💔","😉","🤦‍♂️","🎶","👀","🤷‍♂️","✨","😴","🤝","✌️","⌫"),
-                listOf("?123","🌐","☺","مسافة",".","↵")
-            )
-        }
-        if (index == 5) { // Emoji Objects & Animals
-            return listOf(
-                listOf("🐶","🐱","🍎","🍓","🍕","🍔","☕","🚗","✈️","⚽","🏀"),
-                listOf("🏆","🎮","📱","💻","💡","💸","💣","🔫","🎁","🎈","🧸"),
-                listOf("☀️","🌙","⭐","🌟","🔥","💧","🌈","⛄","🎃","🎄","⌫"),
-                listOf("?123","🌐","☺","مسافة",".","↵")
-            )
-        }
-        if (index == 6) { // Emoji Flags & Symbols
-            return listOf(
-                listOf("🇾🇪","🇸🇦","🇵🇸","🇪🇬","🇮🇶","🇸🇾","🇲🇦","🇩🇿","🇱🇧","🇴🇲","🇯🇴"),
-                listOf("✔️","❌","❗","❓","💯","🛑","⚠️","✅","❎","💠","🌀"),
-                listOf("1️⃣","2️⃣","3️⃣","4️⃣","5️⃣","6️⃣","7️⃣","8️⃣","9️⃣","🔟","⌫"),
-                listOf("?123","🌐","☺","مسافة",".","↵")
-            )
-        }
         
-        // Default Arabic (index 0)
-        val row1 = base.take(12)
-        val row2 = base.drop(12).take(11) + listOf("⌫")
-        val row3 = listOf("⇧") + base.drop(23).take(10) + listOf("↵")
-        val row4 = listOf("?123", "🌐", "☺", "مسافة", ".", ",")
+        // التخطيط الافتراضي تم إصلاحه ليطابق Gboard تماماً (المسح في الصف الثالث، والإدخال في الرابع)
+        val letters = if (index == 1) listOf(
+            "ق","و","ع","ر","ت","ي","ب","ل","ا","د","س","م",
+            "ن","ك","ط","ح","ض","ص","ث","خ","ج","ف","غ",
+            "ش","ه","ة","و","ز","ظ","ذ","ء","ئ","ؤ","لا"
+        ) else base
+
+        val row1 = letters.take(12)
+        val row2 = letters.drop(12).take(11)
+        val row3 = listOf("⇧") + letters.drop(23).take(10) + listOf("⌫")
+        val row4 = listOf("?123", "🌐", "☺", "مسافة", ".", "↵")
         
         return listOf(row1, row2, row3, row4)
     }

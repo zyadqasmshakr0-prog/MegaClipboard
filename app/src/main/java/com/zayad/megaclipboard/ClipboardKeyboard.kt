@@ -17,6 +17,7 @@ import java.util.Date
 import java.util.Locale
 
 class ClipboardKeyboard : InputMethodService() {
+    private var emojiMode = false
 
     private lateinit var clipboardManager: ClipboardManager
 
@@ -465,12 +466,44 @@ class ClipboardKeyboard : InputMethodService() {
         generateKeyboardLayout()
     }
 
-        private fun generateKeyboardLayout() {
+            private fun generateKeyboardLayout() {
         layoutKeysContainer?.removeAllViews()
+
+        if (emojiMode) {
+            val scrollView = android.widget.ScrollView(this).apply {
+                layoutParams = android.widget.LinearLayout.LayoutParams(android.view.ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(240))
+            }
+            val panel = android.widget.LinearLayout(this).apply {
+                orientation = android.widget.LinearLayout.VERTICAL
+                setPadding(0, 10, 0, 10)
+            }
+            val backRow = android.widget.LinearLayout(this).apply {
+                orientation = android.widget.LinearLayout.HORIZONTAL
+                layoutParams = android.widget.LinearLayout.LayoutParams(android.view.ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(50))
+            }
+            createKeyButton(backRow, "🔙 رجوع")
+            panel.addView(backRow)
+
+            val emojis = listOf("😂","❤️","😍","🤣","😊","🙏","💕","😭","😘","👍","🔥","🥰","😁","✨","🥺","😅","😎","🙌","🎉","✅","🤔","🌹","💔","😉","🤦‍♂️","🎶","👀","🤷‍♂️","😴","🤝","✌️","🐶","🐱","🍎","🍓","🍕","🍔","☕","🚗","✈️","⚽","🏀","🏆","🎮","📱","💻","💡","💸","💣","🔫","🎁","🎈","🧸","☀️","🌙","⭐","🌟","💧","🌈","⛄","🎃","🎄","✔️","❌","❗","❓","💯","🛑","⚠️","✅","❎","💠","🌀","🇾🇪","🇸🇦","🇵🇸","🇪🇬","🇮🇶","🇸🇾","🇲🇦","🇩🇿","🇱🇧","🇴🇲","🇯🇴")
+            
+            emojis.chunked(8).forEach { chunk ->
+                val r = android.widget.LinearLayout(this).apply {
+                    orientation = android.widget.LinearLayout.HORIZONTAL
+                    layoutParams = android.widget.LinearLayout.LayoutParams(android.view.ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(50))
+                }
+                chunk.forEach { em -> createKeyButton(r, em) }
+                panel.addView(r)
+            }
+            scrollView.addView(panel)
+            layoutKeysContainer?.addView(scrollView)
+            return
+        }
+
         if (numberMode) {
             generateNumberLayout()
             return
         }
+
         val rows = KeyboardLayoutManager.getRows(currentLayoutIndex, prefs())
         rows.forEach { row ->
             val rowLayout = android.widget.LinearLayout(this).apply {
@@ -653,6 +686,9 @@ class ClipboardKeyboard : InputMethodService() {
     }
 
     private fun handleKey(key: String) {
+        if (key == "☺") { emojiMode = true; generateKeyboardLayout(); return }
+        if (key == "🔙 رجوع") { emojiMode = false; generateKeyboardLayout(); return }
+
 
         val connection =
             currentInputConnection
