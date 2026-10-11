@@ -1,5 +1,4 @@
 package com.zayad.megaclipboard
-
 import android.app.Activity
 import android.graphics.Color
 import android.os.Bundle
@@ -7,6 +6,7 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import android.widget.TextView
 import android.widget.Toast
 import android.preference.PreferenceManager
 
@@ -55,64 +55,68 @@ class MainActivity : Activity() {
         if (intent.getStringExtra("TARGET_TAB") == "KEYBOARD_LAYOUTS") showLayoutsTab() else showGeneralTab()
     }
 
-    // دالة هندسية لمنع تضارب أبعاد الأزرار (تمنع الانهيار)
-    private fun getStdParams(): LinearLayout.LayoutParams {
-        return LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-            setMargins(0, 10, 0, 20)
+    // دالة إنشاء أزرار قوية وواضحة جداً لمنع اختفاء النصوص
+    private fun createSettingsBtn(title: String, bgColor: String, onClick: () -> Unit): Button {
+        return Button(this).apply {
+            text = title
+            isAllCaps = false
+            textSize = 16f
+            setTextColor(Color.WHITE)
+            setBackgroundColor(Color.parseColor(bgColor))
+            val params = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            params.setMargins(0, 10, 0, 20)
+            layoutParams = params
+            setPadding(0, 30, 0, 30)
+            setOnClickListener { onClick() }
         }
+    }
+
+    private fun showErrorDisplay(e: Throwable) {
+        contentContainer.removeAllViews()
+        val errorText = TextView(this).apply {
+            text = "⚠️ حدث خطأ داخلي ولن ينهار التطبيق:\n\n${e.message}\n\n${e.stackTraceToString()}"
+            setTextColor(Color.parseColor("#FF5252"))
+            textSize = 14f
+        }
+        contentContainer.addView(errorText)
     }
 
     private fun showGeneralTab() {
         try {
             contentContainer.removeAllViews()
 
-            val btnEnable = Button(this).apply {
-                text = "⌨️ تفعيل الكيبورد في النظام"
-                setTextColor(Color.WHITE)
-                setBackgroundColor(Color.parseColor("#1565C0"))
-                setOnClickListener { startActivity(android.content.Intent(android.provider.Settings.ACTION_INPUT_METHOD_SETTINGS)) }
+            val btnEnable = createSettingsBtn("⌨️ تفعيل الكيبورد في النظام", "#1565C0") {
+                startActivity(android.content.Intent(android.provider.Settings.ACTION_INPUT_METHOD_SETTINGS))
             }
-            contentContainer.addView(btnEnable, getStdParams())
+            contentContainer.addView(btnEnable)
 
-            val btnSelect = Button(this).apply {
-                text = "✅ اختيار كافتراضي"
-                setTextColor(Color.WHITE)
-                setBackgroundColor(Color.parseColor("#2E7D32"))
-                setOnClickListener {
-                    val imm = getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
-                    imm.showInputMethodPicker()
-                }
+            val btnSelect = createSettingsBtn("✅ اختيار MegaClipboard كافتراضي", "#2E7D32") {
+                val imm = getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+                imm.showInputMethodPicker()
             }
-            contentContainer.addView(btnSelect, getStdParams())
+            contentContainer.addView(btnSelect)
 
             val prefs = PreferenceManager.getDefaultSharedPreferences(this)
             var isSaveEnabled = prefs.getBoolean("permanent_save", false)
-            val btnSave = Button(this).apply {
-                text = if (isSaveEnabled) "💾 الحفظ الدائم: مفعل" else "💾 الحفظ الدائم: معطل"
-                setTextColor(Color.WHITE)
-                setBackgroundColor(if (isSaveEnabled) Color.parseColor("#1565C0") else Color.parseColor("#424242"))
-                setOnClickListener {
-                    isSaveEnabled = !isSaveEnabled
-                    prefs.edit().putBoolean("permanent_save", isSaveEnabled).apply()
-                    text = if (isSaveEnabled) "💾 الحفظ الدائم: مفعل" else "💾 الحفظ الدائم: معطل"
-                    setBackgroundColor(if (isSaveEnabled) Color.parseColor("#1565C0") else Color.parseColor("#424242"))
-                }
+            val btnSave = createSettingsBtn(if (isSaveEnabled) "💾 الحفظ الدائم: مفعل" else "💾 الحفظ الدائم: معطل", if (isSaveEnabled) "#1565C0" else "#424242") {
+                // سيتم تحديث الزر برمجياً داخل اللمسة
             }
-            contentContainer.addView(btnSave, getStdParams())
-
-            // تمت استعادة زر الحافظة المثبتة هنا
-            val btnPinned = Button(this).apply {
-                text = "📌 قائمة الحافظة المثبتة"
-                setTextColor(Color.WHITE)
-                setBackgroundColor(Color.parseColor("#424242"))
-                setOnClickListener {
-                    Toast.makeText(this@MainActivity, "سيتم عرض القائمة المثبتة هنا قريباً", Toast.LENGTH_SHORT).show()
-                }
+            btnSave.setOnClickListener {
+                isSaveEnabled = !isSaveEnabled
+                prefs.edit().putBoolean("permanent_save", isSaveEnabled).apply()
+                btnSave.text = if (isSaveEnabled) "💾 الحفظ الدائم: مفعل" else "💾 الحفظ الدائم: معطل"
+                btnSave.setBackgroundColor(if (isSaveEnabled) Color.parseColor("#1565C0") else Color.parseColor("#424242"))
             }
-            contentContainer.addView(btnPinned, getStdParams())
+            contentContainer.addView(btnSave)
 
-        } catch (e: Exception) {
-            Toast.makeText(this, "خطأ: ${e.message}", Toast.LENGTH_LONG).show()
+            // زر القائمة المثبتة - تم تصميمه بوضوح تام ولون برتقالي جذاب لتراه بوضوح
+            val btnPinned = createSettingsBtn("📌 قائمة الحافظة المثبتة", "#E64A19") {
+                Toast.makeText(this@MainActivity, "سيتم عرض القائمة هنا قريباً", Toast.LENGTH_SHORT).show()
+            }
+            contentContainer.addView(btnPinned)
+
+        } catch (t: Throwable) {
+            showErrorDisplay(t)
         }
     }
 
@@ -122,12 +126,11 @@ class MainActivity : Activity() {
             val prefs = PreferenceManager.getDefaultSharedPreferences(this)
             var currentLayoutIndex = prefs.getInt("keyboard_layout", 0)
 
-            val title = Button(this).apply {
+            val title = TextView(this).apply {
                 text = "اختر الترتيب المفضل للحروف:"
                 setTextColor(Color.WHITE)
-                setBackgroundColor(Color.TRANSPARENT)
                 textSize = 18f
-                setPadding(0, 0, 0, 20)
+                setPadding(0, 0, 0, 30)
             }
             contentContainer.addView(title)
 
@@ -136,77 +139,72 @@ class MainActivity : Activity() {
             val buttons = mutableListOf<Button>()
 
             names.forEachIndexed { index, name ->
-                val layoutId = layoutIds[index]
+                val layoutId = layoutIds.getOrElse(index) { 0 }
+                val isSelected = (layoutId == currentLayoutIndex)
+                
                 val btn = Button(this).apply {
-                    text = if (layoutId == currentLayoutIndex) "✓ $name" else name
+                    text = if (isSelected) "✓ $name" else name
                     isAllCaps = false
                     setTextColor(Color.WHITE)
-                    setBackgroundColor(if (layoutId == currentLayoutIndex) Color.parseColor("#1565C0") else Color.parseColor("#252525"))
-                    setPadding(0, 20, 0, 20)
+                    setBackgroundColor(if (isSelected) Color.parseColor("#1565C0") else Color.parseColor("#252525"))
+                    val params = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                    params.setMargins(0, 10, 0, 10)
+                    layoutParams = params
+                    setPadding(0, 25, 0, 25)
+                    
                     setOnClickListener {
                         currentLayoutIndex = layoutId
                         prefs.edit().putInt("keyboard_layout", layoutId).apply()
                         buttons.forEachIndexed { i, b ->
-                            val selected = layoutIds[i] == currentLayoutIndex
-                            b.text = if (selected) "✓ ${names[i]}" else names[i]
-                            b.setBackgroundColor(if (selected) Color.parseColor("#1565C0") else Color.parseColor("#252525"))
+                            val checkId = layoutIds.getOrElse(i) { 0 }
+                            val active = (checkId == currentLayoutIndex)
+                            b.text = if (active) "✓ ${names[i]}" else names[i]
+                            b.setBackgroundColor(if (active) Color.parseColor("#1565C0") else Color.parseColor("#252525"))
                         }
                         Toast.makeText(this@MainActivity, "تم تفعيل $name", Toast.LENGTH_SHORT).show()
                     }
                 }
-                val params = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-                params.setMargins(0, 8, 0, 8)
                 buttons.add(btn)
-                contentContainer.addView(btn, params)
+                contentContainer.addView(btn)
             }
 
-            val customTitle = Button(this).apply {
+            val customTitle = TextView(this).apply {
                 text = "✋ ترتيبي الخاص (اسحب لتغيير المكان):"
                 setTextColor(Color.WHITE)
-                setBackgroundColor(Color.TRANSPARENT)
                 textSize = 18f
-                setPadding(0, 60, 0, 20)
+                setPadding(0, 50, 0, 30)
             }
             contentContainer.addView(customTitle)
 
+            // تحميل المحرر بأمان
             val editor = KeyboardLayoutEditorView(this, KeyboardLayoutManager.getCustom(prefs))
             val editorParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, (320 * resources.displayMetrics.density).toInt())
-            editorParams.setMargins(0, 10, 0, 30)
+            editorParams.setMargins(0, 10, 0, 40)
             contentContainer.addView(editor, editorParams)
 
-            val saveBtn = Button(this).apply {
-                text = "💾 حفظ الترتيب وتفعيله"
-                setTextColor(Color.WHITE)
-                setBackgroundColor(Color.parseColor("#1565C0"))
-                setOnClickListener {
-                    KeyboardLayoutManager.saveCustom(prefs, editor.getItems())
-                    currentLayoutIndex = KeyboardLayoutManager.CUSTOM_INDEX
-                    prefs.edit().putInt("keyboard_layout", currentLayoutIndex).apply()
-                    buttons.forEachIndexed { i, b ->
-                        val selected = layoutIds[i] == currentLayoutIndex
-                        b.text = if (selected) "✓ ${names[i]}" else names[i]
-                        b.setBackgroundColor(if (selected) Color.parseColor("#1565C0") else Color.parseColor("#252525"))
-                    }
-                    Toast.makeText(this@MainActivity, "تم الحفظ والتفعيل!", Toast.LENGTH_SHORT).show()
+            val saveBtn = createSettingsBtn("💾 حفظ الترتيب وتفعيله", "#1565C0") {
+                KeyboardLayoutManager.saveCustom(prefs, editor.getItems())
+                currentLayoutIndex = KeyboardLayoutManager.CUSTOM_INDEX
+                prefs.edit().putInt("keyboard_layout", currentLayoutIndex).apply()
+                buttons.forEachIndexed { i, b ->
+                    val checkId = layoutIds.getOrElse(i) { 0 }
+                    val active = (checkId == currentLayoutIndex)
+                    b.text = if (active) "✓ ${names[i]}" else names[i]
+                    b.setBackgroundColor(if (active) Color.parseColor("#1565C0") else Color.parseColor("#252525"))
                 }
+                Toast.makeText(this@MainActivity, "تم الحفظ والتفعيل بنجاح!", Toast.LENGTH_SHORT).show()
             }
-            contentContainer.addView(saveBtn, getStdParams())
+            contentContainer.addView(saveBtn)
 
-            // تمت استعادة زر استعادة الافتراضي لتكتمل الواجهة
-            val resetBtn = Button(this).apply {
-                text = "↩️ استعادة الترتيب الافتراضي"
-                setTextColor(Color.WHITE)
-                setBackgroundColor(Color.parseColor("#B71C1C"))
-                setOnClickListener {
-                    KeyboardLayoutManager.resetCustom(prefs)
-                    Toast.makeText(this@MainActivity, "تمت الاستعادة. جاري تحديث الواجهة...", Toast.LENGTH_SHORT).show()
-                    showLayoutsTab() // إعادة تحميل التبويب فوراً لرؤية التغييرات
-                }
+            val resetBtn = createSettingsBtn("↩️ استعادة الترتيب الافتراضي", "#B71C1C") {
+                KeyboardLayoutManager.resetCustom(prefs)
+                Toast.makeText(this@MainActivity, "تمت الاستعادة", Toast.LENGTH_SHORT).show()
+                showLayoutsTab()
             }
-            contentContainer.addView(resetBtn, getStdParams())
+            contentContainer.addView(resetBtn)
 
-        } catch (e: Exception) {
-            Toast.makeText(this, "خطأ في تحميل الخرائط: ${e.message}", Toast.LENGTH_LONG).show()
+        } catch (t: Throwable) {
+            showErrorDisplay(t)
         }
     }
 }

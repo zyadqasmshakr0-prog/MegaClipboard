@@ -18,7 +18,6 @@ class KeyboardLayoutEditorView(context: Context, initialItems: List<String>) : V
     private val rowCounts = listOf(12, 12, 12, 6)
     
     init {
-        setLayerType(LAYER_TYPE_HARDWARE, null)
         isClickable = true
     }
 
@@ -57,8 +56,11 @@ class KeyboardLayoutEditorView(context: Context, initialItems: List<String>) : V
             val keyWidth = width.toFloat() / count
             for (column in 0 until count) {
                 val index = startIndex + column
+                // حماية مطلقة: جلب الحرف أو وضع علامة استفهام بدلاً من الانهيار
+                val textToDraw = items.getOrElse(index) { "?" }
+                
                 if (!(dragging && index == draggedIndex)) {
-                    drawButton(canvas, items[index], column * keyWidth, row * rowHeight, keyWidth, rowHeight, false)
+                    drawButton(canvas, textToDraw, column * keyWidth, row * rowHeight, keyWidth, rowHeight, false)
                 } else {
                     paint.color = Color.parseColor("#1A1A1A")
                     val rect = RectF(column * keyWidth + 2f, row * rowHeight + 3f, column * keyWidth + keyWidth - 4f, row * rowHeight + rowHeight - 6f)
@@ -70,7 +72,8 @@ class KeyboardLayoutEditorView(context: Context, initialItems: List<String>) : V
 
         if (dragging && draggedIndex >= 0) {
             val w = getRowKeyWidth(draggedIndex)
-            drawButton(canvas, items[draggedIndex], floatingX - w / 2, floatingY - rowHeight / 2, w, rowHeight, true)
+            val floatText = items.getOrElse(draggedIndex) { "?" }
+            drawButton(canvas, floatText, floatingX - w / 2, floatingY - rowHeight / 2, w, rowHeight, true)
         }
     }
 
@@ -109,7 +112,8 @@ class KeyboardLayoutEditorView(context: Context, initialItems: List<String>) : V
                     floatingX = event.x
                     floatingY = event.y
                     val target = indexAt(event.x, event.y)
-                    if (target != draggedIndex && target in 0..41) {
+                    // حماية إضافية من الانهيار أثناء التبديل
+                    if (target != draggedIndex && target in 0 until items.size && draggedIndex in 0 until items.size) {
                         val temp = items[draggedIndex]
                         items[draggedIndex] = items[target]
                         items[target] = temp
