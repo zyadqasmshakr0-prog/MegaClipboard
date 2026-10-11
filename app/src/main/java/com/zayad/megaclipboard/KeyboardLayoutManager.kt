@@ -6,30 +6,17 @@ object KeyboardLayoutManager {
     const val CUSTOM_INDEX = 11
     private const val PREF_CUSTOM = "custom_arabic_keyboard_layout"
 
-    private val base = listOf(
-        "ض","ص","ث","ق","ف","غ","ع","ه","خ","ح","ج","د",
-        "ش","س","ي","ب","ل","ا","ت","ن","م","ك","ط",
-        "ئ","ء","ؤ","ر","لا","ى","ة","و","ز","ظ"
-    )
+    private val base = listOf("ض","ص","ث","ق","ف","غ","ع","ه","خ","ح","ج","د","ش","س","ي","ب","ل","ا","ت","ن","م","ك","ط","ئ","ء","ؤ","ر","لا","ى","ة","و","ز","ظ")
+    private val baseCustom = listOf("ض","ص","ث","ق","ف","غ","ع","ه","خ","ح","ج","د","ش","س","ي","ب","ل","ا","ت","ن","م","ك","ط","⌫","⇧","ئ","ء","ؤ","ر","لا","ى","ة","و","ز","ظ","↵","?123","🌐","☺","مسافة",".",",")
+
+    fun getLayoutIds(): List<Int> = listOf(0, 1, ENGLISH_INDEX, CUSTOM_INDEX)
     
-    private val baseCustom = listOf(
-        "ض","ص","ث","ق","ف","غ","ع","ه","خ","ح","ج","د",
-        "ش","س","ي","ب","ل","ا","ت","ن","م","ك","ط","⌫",
-        "⇧","ئ","ء","ؤ","ر","لا","ى","ة","و","ز","ظ","↵",
-        "?123","🌐","☺","مسافة",".",","
+    fun getNames(): List<String> = listOf(
+        "🇾🇪 العربي القياسي (Gboard)",
+        "⚡ العربي السريع",
+        "🇺🇸 English QWERTY",
+        "✋ ترتيبي الخاص"
     )
-
-    fun getName(index: Int): String {
-        return when (index) {
-            0 -> "🇾🇪 العربي القياسي (كيبورد Gboard)"
-            1 -> "⚡ العربي السريع"
-            10 -> "🇺🇸 English QWERTY"
-            11 -> "✋ ترتيبي الخاص"
-            else -> "تخطيط $index"
-        }
-    }
-
-    fun getNames(): List<String> = listOf(getName(0), getName(1), getName(10), getName(11))
 
     fun getCustom(prefs: SharedPreferences): List<String> {
         val saved = prefs.getString(PREF_CUSTOM, null)
@@ -60,17 +47,11 @@ object KeyboardLayoutManager {
             )
         }
         
-        // التخطيط الافتراضي تم إصلاحه ليطابق Gboard تماماً (المسح في الصف الثالث، والإدخال في الرابع)
-        val letters = if (index == 1) listOf(
-            "ق","و","ع","ر","ت","ي","ب","ل","ا","د","س","م",
-            "ن","ك","ط","ح","ض","ص","ث","خ","ج","ف","غ",
-            "ش","ه","ة","و","ز","ظ","ذ","ء","ئ","ؤ","لا"
-        ) else base
-
+        val letters = if (index == 1) listOf("ق","و","ع","ر","ت","ي","ب","ل","ا","د","س","م","ن","ك","ط","ح","ض","ص","ث","خ","ج","ف","غ","ش","ه","ة","و","ز","ظ","ذ","ء","ئ","ؤ","لا") else base
         val row1 = letters.take(12)
-        val row2 = letters.drop(12).take(11)
-        val row3 = listOf("⇧") + letters.drop(23).take(10) + listOf("⌫")
-        val row4 = listOf("?123", "🌐", "☺", "مسافة", ".", "↵")
+        val row2 = letters.drop(12).take(11) + listOf("⌫")
+        val row3 = listOf("⇧") + letters.drop(23).take(10) + listOf("↵")
+        val row4 = listOf("?123", "🌐", "☺", "مسافة", ".", ",")
         
         return listOf(row1, row2, row3, row4)
     }

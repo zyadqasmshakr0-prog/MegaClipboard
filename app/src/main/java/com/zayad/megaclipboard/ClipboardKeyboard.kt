@@ -843,11 +843,11 @@ class ClipboardKeyboard : InputMethodService() {
         return (
             dp * resources.displayMetrics.density
         ).toInt()
-    }
-    override fun onStartInputView(info: android.view.inputmethod.EditorInfo?, restarting: Boolean) {
+    }    override fun onStartInputView(info: android.view.inputmethod.EditorInfo?, restarting: Boolean) {
         super.onStartInputView(info, restarting)
         currentLayoutIndex = prefs().getInt("keyboard_layout", 0)
         emojiMode = false
+        numberMode = false
         setCandidatesViewShown(true)
         generateKeyboardLayout()
     }
@@ -874,9 +874,7 @@ class ClipboardKeyboard : InputMethodService() {
         }
         bar.addView(clipboardBtn)
         return bar
-    }
-
-    private fun handleKey(key: String) {
+    }    private fun handleKey(key: String) {
         val ic = currentInputConnection ?: return
         when (key) {
             "⌫" -> ic.deleteSurroundingText(1, 0)
@@ -885,10 +883,15 @@ class ClipboardKeyboard : InputMethodService() {
                 ic.sendKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, android.view.KeyEvent.KEYCODE_ENTER))
             }
             "مسافة", " " -> ic.commitText(" ", 1)
+            "?123" -> {
+                numberMode = !numberMode
+                generateKeyboardLayout()
+            }
             "🌐" -> {
                 currentLayoutIndex = if (currentLayoutIndex == KeyboardLayoutManager.ENGLISH_INDEX) 0 else KeyboardLayoutManager.ENGLISH_INDEX
                 prefs().edit().putInt("keyboard_layout", currentLayoutIndex).apply()
                 emojiMode = false
+                numberMode = false
                 generateKeyboardLayout()
             }
             "☺" -> {
