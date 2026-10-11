@@ -845,7 +845,7 @@ class ClipboardKeyboard : InputMethodService() {
         ).toInt()
     }    override fun onStartInputView(info: android.view.inputmethod.EditorInfo?, restarting: Boolean) {
         super.onStartInputView(info, restarting)
-        currentLayoutIndex = prefs().getInt("keyboard_layout", 0)
+        currentLayoutIndex = android.preference.PreferenceManager.getDefaultSharedPreferences(this).getInt("keyboard_layout", 0)
         emojiMode = false
         numberMode = false
         setCandidatesViewShown(true)
@@ -883,10 +883,8 @@ class ClipboardKeyboard : InputMethodService() {
                 ic.sendKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, android.view.KeyEvent.KEYCODE_ENTER))
             }
             "مسافة", " " -> ic.commitText(" ", 1)
-            "?123" -> {
-                numberMode = !numberMode
-                generateKeyboardLayout()
-            }
+            "?123" -> { numberMode = true; generateKeyboardLayout() }
+            "ABC", "abc", "أ ب ج", "العربية", "عودة" -> { numberMode = false; generateKeyboardLayout() }
             "🌐" -> {
                 currentLayoutIndex = if (currentLayoutIndex == KeyboardLayoutManager.ENGLISH_INDEX) 0 else KeyboardLayoutManager.ENGLISH_INDEX
                 prefs().edit().putInt("keyboard_layout", currentLayoutIndex).apply()

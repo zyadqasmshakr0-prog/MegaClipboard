@@ -81,6 +81,16 @@ class MainActivity : Activity() {
         contentContainer.addView(errorText)
     }
 
+    private fun showPinnedClipboardTab() {
+contentContainer.removeAllViews()
+val title = android.widget.TextView(this).apply { text = "📌 النصوص المثبتة"; setTextColor(android.graphics.Color.WHITE); textSize = 20f; setPadding(0, 0, 0, 30) }
+contentContainer.addView(title)
+val empty = android.widget.TextView(this).apply { text = "لا توجد نصوص مثبتة حالياً.\n\n(هذه الواجهة جاهزة ليتم حقن النصوص بداخلها من محرك C++)"; setTextColor(android.graphics.Color.GRAY); textSize = 16f; setPadding(0, 50, 0, 50); gravity = android.view.Gravity.CENTER }
+contentContainer.addView(empty)
+val back = createSettingsBtn("🔙 رجوع للإعدادات", "#333333") { showGeneralTab() }
+contentContainer.addView(back)
+}
+
     private fun showGeneralTab() {
         try {
             contentContainer.removeAllViews()
@@ -110,9 +120,7 @@ class MainActivity : Activity() {
             contentContainer.addView(btnSave)
 
             // زر القائمة المثبتة - تم تصميمه بوضوح تام ولون برتقالي جذاب لتراه بوضوح
-            val btnPinned = createSettingsBtn("📌 قائمة الحافظة المثبتة", "#E64A19") {
-                Toast.makeText(this@MainActivity, "سيتم عرض القائمة هنا قريباً", Toast.LENGTH_SHORT).show()
-            }
+            val btnPinned = createSettingsBtn("📌 قائمة الحافظة المثبتة", "#E64A19") { showPinnedClipboardTab() }
             contentContainer.addView(btnPinned)
 
         } catch (t: Throwable) {

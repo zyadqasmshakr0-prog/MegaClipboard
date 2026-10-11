@@ -114,10 +114,9 @@ class KeyboardLayoutEditorView(context: Context, initialItems: List<String>) : V
                     val target = indexAt(event.x, event.y)
                     // حماية إضافية من الانهيار أثناء التبديل
                     if (target != draggedIndex && target in 0 until items.size && draggedIndex in 0 until items.size) {
-                        val temp = items[draggedIndex]
-                        items[draggedIndex] = items[target]
-                        items[target] = temp
-                        draggedIndex = target
+                        val item = items.removeAt(draggedIndex)
+items.add(target, item)
+draggedIndex = target
                         performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP, HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING)
                     }
                     invalidate()
