@@ -18,6 +18,7 @@ class MainActivity : Activity() {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(Color.parseColor("#121212"))
+            fitsSystemWindows = true // يمنع تداخل التطبيق مع ساعة الهاتف
         }
         val tabBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL

@@ -12,15 +12,13 @@ class KeyboardLayoutEditorView(context: Context, initialItems: List<String>) : V
     private val items = initialItems.toMutableList()
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private var draggedIndex = -1
+    private var hoverIndex = -1
     private var dragging = false
     private var floatingX = 0f
     private var floatingY = 0f
     private val rowCounts = listOf(12, 12, 12, 6)
     
-    init {
-        isClickable = true
-    }
-
+    init { isClickable = true }
     fun getItems(): List<String> = items.toList()
 
     private fun indexAt(x: Float, y: Float): Int {
@@ -56,15 +54,17 @@ class KeyboardLayoutEditorView(context: Context, initialItems: List<String>) : V
             val keyWidth = width.toFloat() / count
             for (column in 0 until count) {
                 val index = startIndex + column
-                // حماية مطلقة: جلب الحرف أو وضع علامة استفهام بدلاً من الانهيار
                 val textToDraw = items.getOrElse(index) { "?" }
                 
-                if (!(dragging && index == draggedIndex)) {
-                    drawButton(canvas, textToDraw, column * keyWidth, row * rowHeight, keyWidth, rowHeight, false)
-                } else {
+                if (dragging && index == draggedIndex) {
+                    // ترك مكان الزر الأصلي فارغاً باللون الأسود
                     paint.color = Color.parseColor("#1A1A1A")
                     val rect = RectF(column * keyWidth + 2f, row * rowHeight + 3f, column * keyWidth + keyWidth - 4f, row * rowHeight + rowHeight - 6f)
                     canvas.drawRoundRect(rect, 8f, 8f, paint)
+                } else {
+                    // تظليل المكان المستهدف باللون الأخضر
+                    val isTarget = (dragging && index == hoverIndex)
+                    drawButton(canvas, textToDraw, column * keyWidth, row * rowHeight, keyWidth, rowHeight, false, isTarget)
                 }
                 startIndex++
             }
@@ -73,20 +73,27 @@ class KeyboardLayoutEditorView(context: Context, initialItems: List<String>) : V
         if (dragging && draggedIndex >= 0) {
             val w = getRowKeyWidth(draggedIndex)
             val floatText = items.getOrElse(draggedIndex) { "?" }
-            drawButton(canvas, floatText, floatingX - w / 2, floatingY - rowHeight / 2, w, rowHeight, true)
+            drawButton(canvas, floatText, floatingX - w / 2, floatingY - rowHeight / 2, w, rowHeight, true, false)
         }
     }
 
-    private fun drawButton(canvas: Canvas, text: String, x: Float, y: Float, w: Float, h: Float, isFloating: Boolean) {
+    private fun drawButton(canvas: Canvas, text: String, x: Float, y: Float, w: Float, h: Float, isFloating: Boolean, isTarget: Boolean) {
         val rect = RectF(x + 2f, y + 3f, x + w - 4f, y + h - 6f)
-        paint.color = if (isFloating) Color.parseColor("#1565C0") else Color.parseColor("#333333")
+        
+        if (isTarget) {
+            paint.color = Color.parseColor("#2E7D32") // لون أخضر لمكان السقوط
+        } else {
+            paint.color = if (isFloating) Color.parseColor("#1565C0") else Color.parseColor("#333333")
+        }
+        
         if (isFloating) {
             canvas.save()
-            canvas.scale(1.15f, 1.15f, rect.centerX(), rect.centerY())
+            canvas.scale(1.2f, 1.2f, rect.centerX(), rect.centerY())
             canvas.drawRoundRect(rect, 12f, 12f, paint)
         } else {
             canvas.drawRoundRect(rect, 8f, 8f, paint)
         }
+        
         paint.color = Color.WHITE
         val fm = paint.fontMetrics
         val textY = rect.centerY() - (fm.ascent + fm.descent) / 2f
@@ -101,6 +108,7 @@ class KeyboardLayoutEditorView(context: Context, initialItems: List<String>) : V
             MotionEvent.ACTION_DOWN -> {
                 parent?.requestDisallowInterceptTouchEvent(true)
                 draggedIndex = indexAt(event.x, event.y)
+                hoverIndex = draggedIndex
                 floatingX = event.x
                 floatingY = event.y
                 dragging = true
@@ -112,11 +120,8 @@ class KeyboardLayoutEditorView(context: Context, initialItems: List<String>) : V
                     floatingX = event.x
                     floatingY = event.y
                     val target = indexAt(event.x, event.y)
-                    // حماية إضافية من الانهيار أثناء التبديل
-                    if (target != draggedIndex && target in 0 until items.size && draggedIndex in 0 until items.size) {
-                        val item = items.removeAt(draggedIndex)
-items.add(target, item)
-draggedIndex = target
+                    if (target != hoverIndex && target in 0 until items.size) {
+                        hoverIndex = target
                         performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP, HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING)
                     }
                     invalidate()
@@ -124,8 +129,17 @@ draggedIndex = target
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 parent?.requestDisallowInterceptTouchEvent(false)
+                // التبديل الحقيقي يحدث فقط عندما ترفع إصبعك!
+                if (dragging && draggedIndex >= 0 && hoverIndex >= 0 && draggedIndex != hoverIndex) {
+                    val temp = items[draggedIndex]
+                    items[draggedIndex] = items[hoverIndex]
+                    items[hoverIndex] = temp
+                }
                 dragging = false
+                draggedIndex = -1
+                hoverIndex = -1
                 invalidate()
+                performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP, HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING)
             }
         }
         return true
