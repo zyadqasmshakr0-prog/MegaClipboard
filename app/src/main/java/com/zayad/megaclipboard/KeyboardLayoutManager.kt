@@ -5,12 +5,13 @@ import android.content.SharedPreferences
 object KeyboardLayoutManager {
     const val ENGLISH_INDEX = 10
     const val CUSTOM_INDEX = 11
+
     private const val PREF_CUSTOM = "custom_arabic_keyboard_layout"
 
     private val base = listOf(
         "ض","ص","ث","ق","ف","غ","ع","ه","خ","ح","ج","د",
-        "ش","س","ي","ب","ل","ا","ت","ن","م","ك","ط","ئ",
-        "ء","ؤ","ر","لا","ى","ة","و","ز","ظ"
+        "ش","س","ي","ب","ل","ا","ت","ن","م","ك","ط",
+        "ئ","ء","ؤ","ر","لا","ى","ة","و","ز","ظ"
     )
 
     private val baseCustom = listOf(
@@ -20,47 +21,42 @@ object KeyboardLayoutManager {
         "?123","🌐","☺","مسافة",".",","
     )
 
+    private val customRowCounts = listOf(12, 12, 12, 6)
+
     fun getLayoutIds(): List<Int> =
         listOf(0, 1, ENGLISH_INDEX, CUSTOM_INDEX)
 
-    fun getNames(): List<String> = listOf(
-        "🇾🇪 العربي القياسي (Gboard)",
-        "⚡ العربي السريع",
-        "🇺🇸 English QWERTY",
-        "✋ ترتيبي الخاص"
-    )
+    fun getNames(): List<String> =
+        listOf(
+            "🇾🇪 العربي القياسي (Gboard)",
+            "⚡ العربي السريع",
+            "🇺🇸 English QWERTY",
+            "✋ ترتيبي الخاص"
+        )
+
+    private fun isValidCustomLayout(layout: List<String>): Boolean {
+        return layout.size == baseCustom.size &&
+            layout.groupingBy { it }.eachCount() ==
+            baseCustom.groupingBy { it }.eachCount()
+    }
 
     fun getCustom(prefs: SharedPreferences): List<String> {
         val saved = prefs.getString(PREF_CUSTOM, null)
-            ?: return baseCustom
+            ?: return baseCustom.toList()
 
-        val result = saved.split("|")
+        if (saved.isBlank()) return baseCustom.toList()
 
-        if (
-            result.size != baseCustom.size ||
-            result.toSet().size != baseCustom.size ||
-            result.toSet() != baseCustom.toSet()
-        ) {
-            resetCustom(prefs)
-            return baseCustom
+        val result = saved.split("|").filter { it.isNotEmpty() }
+
+        return if (isValidCustomLayout(result)) {
+            result
+        } else {
+            baseCustom.toList()
         }
-
-        return result
     }
 
-    fun saveCustom(
-        prefs: SharedPreferences,
-        layout: List<String>
-    ) {
-        if (
-            layout.size != baseCustom.size ||
-            layout.toSet().size != baseCustom.size ||
-            layout.toSet() != baseCustom.toSet()
-        ) {
-            throw IllegalArgumentException(
-                "ترتيب لوحة المفاتيح غير صالح"
-            )
-        }
+    fun saveCustom(prefs: SharedPreferences, layout: List<String>) {
+        if (!isValidCustomLayout(layout)) return
 
         prefs.edit()
             .putString(PREF_CUSTOM, layout.joinToString("|"))
@@ -71,18 +67,16 @@ object KeyboardLayoutManager {
         prefs.edit().remove(PREF_CUSTOM).apply()
     }
 
-    fun getRows(
-        index: Int,
-        prefs: SharedPreferences
-    ): List<List<String>> {
+    fun getRows(index: Int, prefs: SharedPreferences): List<List<String>> {
         if (index == CUSTOM_INDEX) {
-            val c = getCustom(prefs)
-            return listOf(
-                c.take(12),
-                c.drop(12).take(12),
-                c.drop(24).take(12),
-                c.drop(36).take(6)
-            )
+            val keys = getCustom(prefs)
+            var offset = 0
+
+            return customRowCounts.map { count ->
+                val row = keys.drop(offset).take(count)
+                offset += count
+                row
+            }
         }
 
         if (index == ENGLISH_INDEX) {
@@ -107,7 +101,7 @@ object KeyboardLayoutManager {
         val row1 = letters.take(12)
         val row2 = letters.drop(12).take(11) + listOf("⌫")
         val row3 = listOf("⇧") + letters.drop(23).take(10) + listOf("↵")
-        val row4 = listOf("?123","🌐","☺","مسافة",".",",")
+        val row4 = listOf("?123", "🌐", "☺", "مسافة", ".", ",")
 
         return listOf(row1, row2, row3, row4)
     }

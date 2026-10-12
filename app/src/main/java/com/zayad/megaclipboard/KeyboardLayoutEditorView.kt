@@ -12,15 +12,12 @@ import kotlin.math.floor
 
 class KeyboardLayoutEditorView(
     context: Context,
-    initialItems: List<String>
+    initialItems: List<String>,
+    private val onItemsChanged: ((List<String>) -> Unit)? = null
 ) : View(context) {
 
-    companion object {
-        private val ROW_COUNTS = intArrayOf(12, 12, 12, 6)
-        private const val TOTAL_KEYS = 42
-    }
-
     private val items = initialItems.toMutableList()
+    private val originalItems = initialItems.toList()
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
 
     private var draggedIndex = -1
@@ -28,117 +25,121 @@ class KeyboardLayoutEditorView(
     private var dragging = false
     private var floatingX = 0f
     private var floatingY = 0f
-    private var downX = 0f
-    private var downY = 0f
+
+    private val rowCounts = listOf(12, 12, 12, 6)
 
     init {
         isClickable = true
         isFocusable = true
-
-        require(items.size == TOTAL_KEYS) {
-            "يجب أن تحتوي لوحة المفاتيح على 42 زرًا"
-        }
     }
 
     fun getItems(): List<String> = items.toList()
 
-    private fun indexAt(x: Float, y: Float): Int {
-        if (
-            width <= 0 || height <= 0 ||
-            x < 0f || y < 0f ||
-            x >= width.toFloat() ||
-            y >= height.toFloat()
-        ) return -1
-
-        val rowHeight = height.toFloat() / 4f
-        val row = floor(y / rowHeight).toInt()
-            .coerceIn(0, 3)
-
-        val count = ROW_COUNTS[row]
-        val keyWidth = width.toFloat() / count
-        val column = floor(x / keyWidth).toInt()
-            .coerceIn(0, count - 1)
-
-        var index = column
-
-        for (r in 0 until row) {
-            index += ROW_COUNTS[r]
-        }
-
-        return index.takeIf { it in 0 until items.size } ?: -1
+    fun resetItems() {
+        items.clear()
+        items.addAll(originalItems)
+        dragging = false
+        draggedIndex = -1
+        hoverIndex = -1
+        invalidate()
     }
 
-    private fun keyRect(index: Int): RectF {
-        var start = 0
+    private fun indexAt(x: Float, y: Float): Int {
+        if (width <= 0 || height <= 0 || items.isEmpty()) return -1
 
-        for (row in 0..3) {
-            val count = ROW_COUNTS[row]
+        val safeY = y.coerceIn(0f, height.toFloat() - 0.01f)
+        val rowHeight = height.toFloat() / rowCounts.size
+        val row = floor(safeY / rowHeight).toInt().coerceIn(0, rowCounts.lastIndex)
 
-            if (index < start + count) {
-                val column = index - start
-                val keyWidth = width.toFloat() / count
-                val rowHeight = height.toFloat() / 4f
+        val count = rowCounts[row]
+        val keyWidth = width.toFloat() / count
+        val safeX = x.coerceIn(0f, width.toFloat() - 0.01f)
+        val column = floor(safeX / keyWidth).toInt().coerceIn(0, count - 1)
 
-                return RectF(
-                    column * keyWidth + 2f,
-                    row * rowHeight + 3f,
-                    (column + 1) * keyWidth - 2f,
-                    (row + 1) * rowHeight - 3f
-                )
-            }
-
-            start += count
+        var sum = 0
+        for (i in 0 until row) {
+            sum += rowCounts[i]
         }
 
-        return RectF()
+        val index = sum + column
+        return if (index in items.indices) index else -1
+    }
+
+    private fun getRowKeyWidth(index: Int): Float {
+        var sum = 0
+
+        for (i in rowCounts.indices) {
+            if (index < sum + rowCounts[i]) {
+                return width.toFloat() / rowCounts[i]
+            }
+            sum += rowCounts[i]
+        }
+
+        return width.toFloat() / 12f
     }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-
         canvas.drawColor(Color.parseColor("#121212"))
 
         if (width <= 0 || height <= 0) return
 
+        val rowHeight = height.toFloat() / rowCounts.size
         paint.textAlign = Paint.Align.CENTER
-        paint.textSize =
-            14f * resources.displayMetrics.scaledDensity
+        paint.textSize = 14f * resources.displayMetrics.scaledDensity
 
-        for (index in items.indices) {
-            val rect = keyRect(index)
+        var startIndex = 0
 
-            if (dragging && index == draggedIndex) {
-                paint.color = Color.parseColor("#1A1A1A")
-                canvas.drawRoundRect(rect, 8f, 8f, paint)
-            } else {
-                val target =
-                    dragging &&
-                    index == hoverIndex &&
-                    index != draggedIndex
+        for (row in rowCounts.indices) {
+            val count = rowCounts[row]
+            val keyWidth = width.toFloat() / count
 
-                drawButton(
-                    canvas,
-                    items[index],
-                    rect,
-                    false,
-                    target
-                )
+            for (column in 0 until count) {
+                val index = startIndex + column
+                val textToDraw = items.getOrElse(index) { "" }
+
+                if (dragging && index == draggedIndex) {
+                    paint.color = Color.parseColor("#1A1A1A")
+
+                    val rect = RectF(
+                        column * keyWidth + 2f,
+                        row * rowHeight + 3f,
+                        column * keyWidth + keyWidth - 4f,
+                        row * rowHeight + rowHeight - 6f
+                    )
+
+                    canvas.drawRoundRect(rect, 8f, 8f, paint)
+                } else {
+                    val isTarget =
+                        dragging && index == hoverIndex && index != draggedIndex
+
+                    drawButton(
+                        canvas,
+                        textToDraw,
+                        column * keyWidth,
+                        row * rowHeight,
+                        keyWidth,
+                        rowHeight,
+                        false,
+                        isTarget
+                    )
+                }
+
+                startIndex++
             }
         }
 
         if (dragging && draggedIndex in items.indices) {
-            val original = keyRect(draggedIndex)
-            val floating = RectF(
-                floatingX - original.width() / 2f,
-                floatingY - original.height() / 2f,
-                floatingX + original.width() / 2f,
-                floatingY + original.height() / 2f
-            )
+            val keyWidth = getRowKeyWidth(draggedIndex)
+            val floatingText = items[draggedIndex]
 
             drawButton(
                 canvas,
-                items[draggedIndex],
-                floating,
+                floatingText,
+                floatingX - keyWidth / 2f,
+                floatingY - rowHeight / 2f,
+                keyWidth,
+                rowHeight,
                 true,
                 false
             )
@@ -148,63 +149,68 @@ class KeyboardLayoutEditorView(
     private fun drawButton(
         canvas: Canvas,
         text: String,
-        rect: RectF,
-        floating: Boolean,
-        target: Boolean
+        x: Float,
+        y: Float,
+        w: Float,
+        h: Float,
+        isFloating: Boolean,
+        isTarget: Boolean
     ) {
+        val rect = RectF(
+            x + 2f,
+            y + 3f,
+            x + w - 4f,
+            y + h - 6f
+        )
+
         paint.color = when {
-            target -> Color.parseColor("#2E7D32")
-            floating -> Color.parseColor("#1565C0")
+            isTarget -> Color.parseColor("#2E7D32")
+            isFloating -> Color.parseColor("#1565C0")
             else -> Color.parseColor("#333333")
         }
 
-        if (floating) {
+        if (isFloating) {
             canvas.save()
-            canvas.scale(
-                1.08f, 1.08f,
-                rect.centerX(), rect.centerY()
-            )
+            canvas.scale(1.08f, 1.08f, rect.centerX(), rect.centerY())
         }
 
-        canvas.drawRoundRect(rect, 8f, 8f, paint)
-
-        paint.color = Color.WHITE
-
-        val fm = paint.fontMetrics
-        val textY =
-            rect.centerY() - (fm.ascent + fm.descent) / 2f
-
-        val displayText = if (text == "مسافة") "␣" else text
-
-        canvas.drawText(
-            displayText,
-            rect.centerX(),
-            textY,
+        canvas.drawRoundRect(
+            rect,
+            if (isFloating) 12f else 8f,
+            if (isFloating) 12f else 8f,
             paint
         )
 
-        if (floating) canvas.restore()
+        paint.color = Color.WHITE
+        val fontMetrics = paint.fontMetrics
+        val textY = rect.centerY() -
+            (fontMetrics.ascent + fontMetrics.descent) / 2f
+
+        val displayText = if (text == "مسافة") "␣" else text
+        canvas.drawText(displayText, rect.centerX(), textY, paint)
+
+        if (isFloating) {
+            canvas.restore()
+        }
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 val index = indexAt(event.x, event.y)
-
                 if (index !in items.indices) return false
 
                 parent?.requestDisallowInterceptTouchEvent(true)
 
-                downX = event.x
-                downY = event.y
-                floatingX = event.x
-                floatingY = event.y
                 draggedIndex = index
                 hoverIndex = index
+                floatingX = event.x
+                floatingY = event.y
                 dragging = true
 
                 performHapticFeedback(
-                    HapticFeedbackConstants.LONG_PRESS
+                    HapticFeedbackConstants.LONG_PRESS,
+                    HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING
                 )
 
                 invalidate()
@@ -214,19 +220,18 @@ class KeyboardLayoutEditorView(
             MotionEvent.ACTION_MOVE -> {
                 if (!dragging) return false
 
-                floatingX = event.x
-                floatingY = event.y
+                floatingX = event.x.coerceIn(0f, width.toFloat())
+                floatingY = event.y.coerceIn(0f, height.toFloat())
 
                 val target = indexAt(event.x, event.y)
 
-                if (target != hoverIndex) {
+                if (target in items.indices && target != hoverIndex) {
                     hoverIndex = target
 
-                    if (target >= 0) {
-                        performHapticFeedback(
-                            HapticFeedbackConstants.KEYBOARD_TAP
-                        )
-                    }
+                    performHapticFeedback(
+                        HapticFeedbackConstants.KEYBOARD_TAP,
+                        HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING
+                    )
                 }
 
                 invalidate()
@@ -234,30 +239,32 @@ class KeyboardLayoutEditorView(
             }
 
             MotionEvent.ACTION_UP -> {
-                if (!dragging) return false
-
-                val target = indexAt(event.x, event.y)
+                parent?.requestDisallowInterceptTouchEvent(false)
 
                 if (
+                    dragging &&
                     draggedIndex in items.indices &&
-                    target in items.indices &&
-                    draggedIndex != target
+                    hoverIndex in items.indices &&
+                    draggedIndex != hoverIndex
                 ) {
-                    val temp = items[draggedIndex]
-                    items[draggedIndex] = items[target]
-                    items[target] = temp
+                    val movedItem = items.removeAt(draggedIndex)
+                    items.add(hoverIndex, movedItem)
 
-                    performHapticFeedback(
-                        HapticFeedbackConstants.KEYBOARD_TAP
-                    )
+                    onItemsChanged?.invoke(items.toList())
                 }
 
-                finishDrag()
+                finishDragging()
+                performHapticFeedback(
+                    HapticFeedbackConstants.KEYBOARD_TAP,
+                    HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING
+                )
+
                 return true
             }
 
             MotionEvent.ACTION_CANCEL -> {
-                finishDrag()
+                parent?.requestDisallowInterceptTouchEvent(false)
+                finishDragging()
                 return true
             }
         }
@@ -265,12 +272,10 @@ class KeyboardLayoutEditorView(
         return true
     }
 
-    private fun finishDrag() {
+    private fun finishDragging() {
         dragging = false
         draggedIndex = -1
         hoverIndex = -1
-
-        parent?.requestDisallowInterceptTouchEvent(false)
         invalidate()
     }
 }
