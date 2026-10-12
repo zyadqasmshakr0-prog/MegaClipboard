@@ -129,6 +129,12 @@ contentContainer.addView(back)
         }
     }
 
+    private fun notifyKeyboardLayoutChanged() {
+        sendBroadcast(
+            android.content.Intent("com.zayad.megaclipboard.LAYOUT_CHANGED")
+        )
+    }
+
     private fun showLayoutsTab() {
         try {
             contentContainer.removeAllViews()
@@ -164,6 +170,8 @@ contentContainer.addView(back)
                     setOnClickListener {
                         currentLayoutIndex = layoutId
                         prefs.edit().putInt("keyboard_layout", layoutId).apply()
+                        notifyKeyboardLayoutChanged()
+                        notifyKeyboardLayoutChanged()
                         buttons.forEachIndexed { i, b ->
                             val checkId = layoutIds.getOrElse(i) { 0 }
                             val active = (checkId == currentLayoutIndex)
@@ -195,6 +203,8 @@ contentContainer.addView(back)
                 KeyboardLayoutManager.saveCustom(prefs, editor.getItems())
                 currentLayoutIndex = KeyboardLayoutManager.CUSTOM_INDEX
                 prefs.edit().putInt("keyboard_layout", currentLayoutIndex).apply()
+                notifyKeyboardLayoutChanged()
+                notifyKeyboardLayoutChanged()
                 buttons.forEachIndexed { i, b ->
                     val checkId = layoutIds.getOrElse(i) { 0 }
                     val active = (checkId == currentLayoutIndex)
