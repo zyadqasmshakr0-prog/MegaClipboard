@@ -48,8 +48,7 @@ class ClipboardKeyboard : InputMethodService() {
     private fun prefs() =
         getSharedPreferences(prefsName, Context.MODE_PRIVATE)
 
-    private fun layoutPrefs() =
-        layoutPrefs
+    private fun layoutPrefs(): android.content.SharedPreferences = prefs()
 
     private val layoutChangedAction =
         "com.zayad.megaclipboard.LAYOUT_CHANGED"
@@ -867,7 +866,7 @@ class ClipboardKeyboard : InputMethodService() {
         ).toInt()
     }    override fun onStartInputView(info: android.view.inputmethod.EditorInfo?, restarting: Boolean) {
         super.onStartInputView(info, restarting)
-        currentLayoutIndex = android.preference.layoutPrefs().getInt("keyboard_layout", 0)
+        currentLayoutIndex = layoutPrefs().getInt("keyboard_layout", 0)
         emojiMode = false
         numberMode = false
         setCandidatesViewShown(true)
