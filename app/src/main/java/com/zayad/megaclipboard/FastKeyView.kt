@@ -11,7 +11,6 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
 import android.view.HapticFeedbackConstants
-import android.view.WindowManager
 import android.widget.LinearLayout
 import android.widget.PopupWindow
 import android.widget.TextView
@@ -67,12 +66,15 @@ class FastKeyView(context: Context) : View(context) {
     private var pressed = false
     private var longPressTriggered = false
     private var selectedOption = -1
-    private var popupWindow: PopupWindow? = null
+
+    private var previewWindow: PopupWindow? = null
+    private var optionsWindow: PopupWindow? = null
     private var optionViews: List<TextView> = emptyList()
-    private var popupLeft = 0
-    private var popupTop = 0
+
+    private var optionsScreenLeft = 0
+    private var optionsScreenTop = 0
     private var optionWidth = 1
-    private var popupHeight = 0
+    private var optionsHeight = 0
 
     private fun dp(value: Int): Int =
         (value * resources.displayMetrics.density).toInt()
@@ -81,6 +83,7 @@ class FastKeyView(context: Context) : View(context) {
         if (pressed && longPressOptions.isNotEmpty()) {
             longPressTriggered = true
             selectedOption = -1
+            dismissPreview()
 
             if (enableKeyHaptic) {
                 performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
@@ -120,13 +123,80 @@ class FastKeyView(context: Context) : View(context) {
         canvas.drawText(text.toString(), width / 2f, y, paint)
     }
 
+    private fun screenPosition(): IntArray {
+        return IntArray(2).also { getLocationOnScreen(it) }
+    }
+
+    private fun showAtScreenPosition(
+        popup: PopupWindow,
+        screenX: Int,
+        screenY: Int
+    ) {
+        val parent = rootView ?: this
+        val parentPosition = IntArray(2)
+        parent.getLocationOnScreen(parentPosition)
+
+        popup.showAtLocation(
+            parent,
+            Gravity.TOP or Gravity.START,
+            screenX - parentPosition[0],
+            screenY - parentPosition[1]
+        )
+    }
+
+    // نافذة صغيرة تظهر مباشرة عند لمس المفتاح.
+    private fun showPreview() {
+        dismissPreview()
+
+        val label = TextView(context).apply {
+            text = this@FastKeyView.text
+            gravity = Gravity.CENTER
+            textSize = 27f
+            setTextColor(Color.WHITE)
+            setBackgroundColor(Color.parseColor("#242424"))
+            includeFontPadding = false
+        }
+
+        val w = dp(54)
+        val h = dp(48)
+
+        previewWindow = PopupWindow(label, w, h, false).apply {
+            setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+            isTouchable = false
+            isFocusable = false
+            elevation = dp(5).toFloat()
+        }
+
+        val pos = screenPosition()
+        val screenWidth = resources.displayMetrics.widthPixels
+        val x = (pos[0] + width / 2 - w / 2)
+            .coerceIn(0, max(0, screenWidth - w))
+
+        // فوق المفتاح بقليل، وليس أسفل الشاشة.
+        val y = pos[1] - h - dp(3)
+
+        try {
+            showAtScreenPosition(previewWindow!!, x, y)
+        } catch (_: Exception) {
+            dismissPreview()
+        }
+    }
+
+    private fun dismissPreview() {
+        try {
+            previewWindow?.dismiss()
+        } catch (_: Exception) {
+        }
+        previewWindow = null
+    }
+
     private fun showOptionsPopup() {
         dismissOptionsPopup()
-
         if (longPressOptions.isEmpty()) return
 
-        val metrics = resources.displayMetrics
-        val availableWidth = metrics.widthPixels - dp(16)
+        val screenWidth = resources.displayMetrics.widthPixels
+        val availableWidth = max(dp(1), screenWidth - dp(12))
+
         optionWidth = min(
             dp(46),
             max(dp(34), availableWidth / longPressOptions.size)
@@ -153,7 +223,7 @@ class FastKeyView(context: Context) : View(context) {
                 ).apply {
                     setMargins(dp(1), 0, dp(1), 0)
                 }
-                contentDescription = "اختيار $option"
+                includeFontPadding = false
             }
 
             row.addView(cell)
@@ -161,17 +231,17 @@ class FastKeyView(context: Context) : View(context) {
         }
 
         optionViews = cells
-        popupHeight = dp(52)
+        optionsHeight = dp(52)
 
         val popupWidth = min(
             availableWidth,
             optionWidth * longPressOptions.size + dp(8)
         )
 
-        popupWindow = PopupWindow(
+        optionsWindow = PopupWindow(
             row,
             popupWidth,
-            popupHeight,
+            optionsHeight,
             false
         ).apply {
             setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
@@ -180,36 +250,33 @@ class FastKeyView(context: Context) : View(context) {
             elevation = dp(8).toFloat()
         }
 
-        val location = IntArray(2)
-        getLocationOnScreen(location)
+        val pos = screenPosition()
+        optionsScreenLeft = (
+            pos[0] + width / 2 - popupWidth / 2
+        ).coerceIn(0, max(0, screenWidth - popupWidth))
 
-        val x = location[0].coerceIn(
-            0,
-            max(0, metrics.widthPixels - popupWidth)
-        )
-        val y = max(0, location[1] - popupHeight - dp(4))
+        // ضع قائمة البدائل فوق المفتاح الحالي.
+        // في الصف الثاني تظهر قرب الصف الأول، وفي الصف الأول فوقه قليلًا.
+        optionsScreenTop = pos[1] - optionsHeight - dp(4)
 
-        popupWindow?.showAtLocation(
-            rootView,
-            Gravity.TOP or Gravity.START,
-            x,
-            y
-        )
-
-        val popupLocation = IntArray(2)
-        row.getLocationOnScreen(popupLocation)
-        popupLeft = popupLocation[0]
-        popupTop = popupLocation[1]
-
-        selectedOption = -1
+        try {
+            showAtScreenPosition(
+                optionsWindow!!,
+                optionsScreenLeft,
+                optionsScreenTop
+            )
+        } catch (_: Exception) {
+            dismissOptionsPopup()
+        }
     }
 
     private fun updateSelectedOption(rawX: Float, rawY: Float) {
-        val insidePopupY =
-            rawY >= popupTop && rawY <= popupTop + popupHeight
+        val inPopupY =
+            rawY >= optionsScreenTop &&
+            rawY <= optionsScreenTop + optionsHeight
 
-        val index = if (insidePopupY) {
-            floor((rawX - popupLeft) / optionWidth).toInt()
+        val index = if (inPopupY) {
+            floor((rawX - optionsScreenLeft) / optionWidth).toInt()
         } else {
             -1
         }
@@ -219,21 +286,21 @@ class FastKeyView(context: Context) : View(context) {
 
         optionViews.forEachIndexed { i, view ->
             view.setBackgroundColor(
-                if (i == selectedOption)
+                if (i == selectedOption) {
                     Color.parseColor("#1976D2")
-                else
+                } else {
                     Color.parseColor("#333333")
+                }
             )
         }
     }
 
     private fun dismissOptionsPopup() {
         try {
-            popupWindow?.dismiss()
+            optionsWindow?.dismiss()
         } catch (_: Exception) {
         }
-
-        popupWindow = null
+        optionsWindow = null
         optionViews = emptyList()
     }
 
@@ -251,6 +318,8 @@ class FastKeyView(context: Context) : View(context) {
                         HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING
                     )
                 }
+
+                showPreview()
 
                 if (longPressOptions.isNotEmpty()) {
                     postDelayed(
@@ -277,6 +346,7 @@ class FastKeyView(context: Context) : View(context) {
 
                 pressed = false
                 invalidate()
+                dismissPreview()
 
                 if (wasLongPress) {
                     dismissOptionsPopup()
@@ -304,6 +374,7 @@ class FastKeyView(context: Context) : View(context) {
                 pressed = false
                 longPressTriggered = false
                 selectedOption = -1
+                dismissPreview()
                 dismissOptionsPopup()
                 invalidate()
                 return true
@@ -320,6 +391,7 @@ class FastKeyView(context: Context) : View(context) {
 
     override fun onDetachedFromWindow() {
         removeCallbacks(longPressRunnable)
+        dismissPreview()
         dismissOptionsPopup()
         super.onDetachedFromWindow()
     }
