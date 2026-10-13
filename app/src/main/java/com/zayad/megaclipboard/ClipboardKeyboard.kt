@@ -473,17 +473,17 @@ class ClipboardKeyboard : InputMethodService() {
     }
 
     private fun cycleKeyboardLayout() {
+        val ids = KeyboardLayoutManager.getLayoutIds()
+        val currentPosition = ids.indexOf(currentLayoutIndex)
+        currentLayoutIndex = ids[(currentPosition + 1) % ids.size]
 
-        currentLayoutIndex =
-            (
-                currentLayoutIndex + 1
-            ) % 12
-
-        layoutPrefs().edit().putInt("keyboard_layout", currentLayoutIndex).apply()
+        layoutPrefs().edit()
+            .putInt("keyboard_layout", currentLayoutIndex)
+            .apply()
 
         numberMode = false
+        emojiMode = false
         shiftMode = false
-
         generateKeyboardLayout()
     }
 
@@ -897,47 +897,93 @@ class ClipboardKeyboard : InputMethodService() {
         return bar
     }    private fun handleKey(key: String) {
         val ic = currentInputConnection ?: return
+
         when (key) {
             "⌫" -> ic.deleteSurroundingText(1, 0)
-            "↵" -> {
-                ic.sendKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_ENTER))
-                ic.sendKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, android.view.KeyEvent.KEYCODE_ENTER))
+
+            "➡️", "↵" -> {
+                ic.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER))
+                ic.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER))
             }
+
             "مسافة", " " -> ic.commitText(" ", 1)
-            "?123" -> { numberMode = true; generateKeyboardLayout() }
-            "ABC", "abc", "أ ب ج", "العربية", "عودة" -> { numberMode = false; generateKeyboardLayout() }
-            "🌐" -> {
-                currentLayoutIndex = if (currentLayoutIndex == KeyboardLayoutManager.ENGLISH_INDEX) 0 else KeyboardLayoutManager.ENGLISH_INDEX
-                layoutPrefs().edit().putInt("keyboard_layout", currentLayoutIndex).apply()
+
+            "؟123", "?123" -> {
+                numberMode = true
                 emojiMode = false
+                generateKeyboardLayout()
+            }
+
+            "ABC", "abc" -> {
+                numberMode = false
+                emojiMode = false
+                generateKeyboardLayout()
+            }
+
+            "العربية" -> {
+                currentLayoutIndex = 0
+                numberMode = false
+                emojiMode = false
+                shiftMode = false
+                layoutPrefs().edit()
+                    .putInt("keyboard_layout", currentLayoutIndex)
+                    .apply()
+                generateKeyboardLayout()
+            }
+
+            "🌐" -> {
+                currentLayoutIndex =
+                    if (currentLayoutIndex == KeyboardLayoutManager.ENGLISH_INDEX) 0
+                    else KeyboardLayoutManager.ENGLISH_INDEX
+
+                numberMode = false
+                emojiMode = false
+                shiftMode = false
+
+                layoutPrefs().edit()
+                    .putInt("keyboard_layout", currentLayoutIndex)
+                    .apply()
+
+                generateKeyboardLayout()
+            }
+
+            "☀️" -> {
+                currentThemeIndex = (currentThemeIndex + 1) % 3
+                prefs().edit()
+                    .putInt("theme_index", currentThemeIndex)
+                    .apply()
+                applyTheme()
+                generateKeyboardLayout()
+            }
+
+            "🙂", "☺" -> {
+                emojiMode = true
                 numberMode = false
                 generateKeyboardLayout()
             }
-            "☺" -> {
-                emojiMode = true
-                generateKeyboardLayout()
-            }
+
             "🔙 رجوع" -> {
                 emojiMode = false
                 generateKeyboardLayout()
             }
-            "⚙️" -> {
-                requestHideSelf(0)
-                try {
-                    val intent = android.content.Intent(this, Class.forName("com.zayad.megaclipboard.MainActivity"))
-                    intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-                    intent.putExtra("TARGET_TAB", "KEYBOARD_LAYOUTS")
-                    startActivity(intent)
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-            }
-            else -> ic.commitText(key, 1)
-        }
-    }
 
-    private fun handleKeyPress(key: String) {
-        handleKey(key)
+            "⇧" -> {
+                shiftMode = !shiftMode
+                generateKeyboardLayout()
+            }
+
+            "⚙️" -> openKeyboardSettings()
+
+            else -> {
+                val output = if (
+                    shiftMode &&
+                    currentLayoutIndex == KeyboardLayoutManager.ENGLISH_INDEX
+                ) key.uppercase(Locale.ROOT) else key
+
+                ic.commitText(output, 1)
+                shiftMode = false
+            }
+        }
     }
 
     private fun generateKeyboardLayout() {

@@ -14,6 +14,7 @@ object KeyboardLayoutManager {
         "ذ","ئ","ء","ؤ","ر","لا","ى","ة","و","ز","ظ"
     )
 
+    // ترتيب التخطيط المخصص القديم محفوظ كما هو.
     private val baseCustom = listOf(
         "ض","ص","ث","ق","ف","غ","ع","ه","خ","ح","ج","د",
         "ش","س","ي","ب","ل","ا","ت","ن","م","ك","ط","⌫",
@@ -23,12 +24,21 @@ object KeyboardLayoutManager {
 
     private val customRowCounts = listOf(12, 12, 12, 6)
 
+    // القوائم هنا مرتبة من اليسار إلى اليمين على الشاشة.
+    // لذلك يظهر الجيم أقصى اليمين، والطاء تحته، والحذف تحتهما.
+    private val primaryRows = listOf(
+        listOf("ض","ص","ث","ق","ف","غ","ع","ه","خ","ح","ج"),
+        listOf("ش","س","ي","ب","ل","ا","ت","ن","م","ك","ط"),
+        listOf("ذ","ئ","ء","ؤ","ر","لا","ة","و","ز","ظ","د","⌫"),
+        listOf("➡️","☀️","العربية","🌐","🙂","؟123")
+    )
+
     fun getLayoutIds(): List<Int> =
         listOf(0, 1, ENGLISH_INDEX, CUSTOM_INDEX)
 
     fun getNames(): List<String> =
         listOf(
-            "🇾🇪 العربي القياسي (Gboard)",
+            "🇾🇪 العربي القياسي",
             "⚡ العربي السريع",
             "🇺🇸 English QWERTY",
             "✋ ترتيبي الخاص"
@@ -68,6 +78,8 @@ object KeyboardLayoutManager {
     }
 
     fun getRows(index: Int, prefs: SharedPreferences): List<List<String>> {
+        if (index == 0) return primaryRows
+
         if (index == CUSTOM_INDEX) {
             val keys = getCustom(prefs)
             var offset = 0
