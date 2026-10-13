@@ -4,7 +4,7 @@ import android.content.ClipboardManager
 import android.content.BroadcastReceiver
 import android.content.IntentFilter
 import android.os.Build
-import  android.content.Context
+import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.inputmethodservice.InputMethodService
