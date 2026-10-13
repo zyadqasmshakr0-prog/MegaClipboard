@@ -296,21 +296,10 @@ class KeyboardLayoutEditorView(
                     hoverIndex in items.indices &&
                     draggedIndex != hoverIndex
                 ) {
-                    val oldIndex = draggedIndex
-                    val newIndex = hoverIndex
-
-                    val movedItem = items.removeAt(oldIndex)
-
-                    // ضبط موضع الإدراج بعد إزالة العنصر الأصلي.
-                    val insertIndex = if (newIndex > oldIndex) {
-                        newIndex
-                    } else {
-                        newIndex
-                    }.coerceIn(0, items.size)
-
-                    items.add(insertIndex, movedItem)
-
-                    onItemsChanged?.invoke(items.toList())
+                    val temp = items[draggedIndex]
+                    items[draggedIndex] = items[hoverIndex]
+                    items[hoverIndex] = temp
+onItemsChanged?.invoke(items.toList())
                 }
 
                 finishDragging()
