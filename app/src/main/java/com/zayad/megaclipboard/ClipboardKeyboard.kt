@@ -3,7 +3,8 @@ package com.zayad.megaclipboard
 import android.content.ClipboardManager
 import android.content.BroadcastReceiver
 import android.content.IntentFilter
-import android.os.Buildimport android.content.Context
+import android.os.Build
+import  android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.inputmethodservice.InputMethodService
@@ -47,7 +48,7 @@ class ClipboardKeyboard : InputMethodService() {
     private fun prefs() =
         getSharedPreferences(prefsName, Context.MODE_PRIVATE)
 
-    private fun layoutPrefs() =
+    private fun android.preference.PreferenceManager.getDefaultSharedPreferences(this)() =
         android.preference.PreferenceManager.getDefaultSharedPreferences(this)
 
     private val layoutChangedAction =
@@ -55,7 +56,7 @@ class ClipboardKeyboard : InputMethodService() {
 
     private val layoutChangedReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            currentLayoutIndex = layoutPrefs().getInt("keyboard_layout", 0)
+            currentLayoutIndex = android.preference.PreferenceManager.getDefaultSharedPreferences(this)().getInt("keyboard_layout", 0)
             numberMode = false
             shiftMode = false
             emojiMode = false
@@ -136,7 +137,7 @@ class ClipboardKeyboard : InputMethodService() {
         currentThemeIndex =
             prefs().getInt("theme_index", 0)
 
-        currentLayoutIndex = layoutPrefs().getInt("keyboard_layout", 0)
+        currentLayoutIndex = android.preference.PreferenceManager.getDefaultSharedPreferences(this)().getInt("keyboard_layout", 0)
     }
 
     override fun onDestroy() {
@@ -320,7 +321,7 @@ class ClipboardKeyboard : InputMethodService() {
         val editor =
             KeyboardLayoutEditorView(
                 this,
-                KeyboardLayoutManager.getCustom(layoutPrefs())
+                KeyboardLayoutManager.getCustom(android.preference.PreferenceManager.getDefaultSharedPreferences(this)())
             )
 
         val title =
@@ -443,7 +444,7 @@ class ClipboardKeyboard : InputMethodService() {
 
         save.setOnClickListener {
 
-            KeyboardLayoutManager.saveCustom(layoutPrefs(),
+            KeyboardLayoutManager.saveCustom(android.preference.PreferenceManager.getDefaultSharedPreferences(this)(),
                     editor.getItems()
                 )
 
@@ -453,7 +454,7 @@ class ClipboardKeyboard : InputMethodService() {
             numberMode = false
             shiftMode = false
 
-            layoutPrefs().edit().putInt("keyboard_layout", currentLayoutIndex).apply()
+            android.preference.PreferenceManager.getDefaultSharedPreferences(this)().edit().putInt("keyboard_layout", currentLayoutIndex).apply()
 
             generateKeyboardLayout()
 
@@ -479,7 +480,7 @@ class ClipboardKeyboard : InputMethodService() {
                 currentLayoutIndex + 1
             ) % 12
 
-        layoutPrefs().edit().putInt("keyboard_layout", currentLayoutIndex).apply()
+        android.preference.PreferenceManager.getDefaultSharedPreferences(this)().edit().putInt("keyboard_layout", currentLayoutIndex).apply()
 
         numberMode = false
         shiftMode = false
@@ -866,7 +867,7 @@ class ClipboardKeyboard : InputMethodService() {
         ).toInt()
     }    override fun onStartInputView(info: android.view.inputmethod.EditorInfo?, restarting: Boolean) {
         super.onStartInputView(info, restarting)
-        currentLayoutIndex = android.preference.layoutPrefs().getInt("keyboard_layout", 0)
+        currentLayoutIndex = android.preference.android.preference.PreferenceManager.getDefaultSharedPreferences(this)().getInt("keyboard_layout", 0)
         emojiMode = false
         numberMode = false
         setCandidatesViewShown(true)
@@ -908,7 +909,7 @@ class ClipboardKeyboard : InputMethodService() {
             "ABC", "abc", "أ ب ج", "العربية", "عودة" -> { numberMode = false; generateKeyboardLayout() }
             "🌐" -> {
                 currentLayoutIndex = if (currentLayoutIndex == KeyboardLayoutManager.ENGLISH_INDEX) 0 else KeyboardLayoutManager.ENGLISH_INDEX
-                layoutPrefs().edit().putInt("keyboard_layout", currentLayoutIndex).apply()
+                android.preference.PreferenceManager.getDefaultSharedPreferences(this)().edit().putInt("keyboard_layout", currentLayoutIndex).apply()
                 emojiMode = false
                 numberMode = false
                 generateKeyboardLayout()
@@ -983,7 +984,7 @@ class ClipboardKeyboard : InputMethodService() {
             return
         }
 
-        val rows = KeyboardLayoutManager.getRows(currentLayoutIndex, layoutPrefs())
+        val rows = KeyboardLayoutManager.getRows(currentLayoutIndex, android.preference.PreferenceManager.getDefaultSharedPreferences(this)())
         rows.forEach { row ->
             val rowLayout = android.widget.LinearLayout(this).apply {
                 orientation = android.widget.LinearLayout.HORIZONTAL
