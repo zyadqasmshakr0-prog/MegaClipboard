@@ -533,108 +533,109 @@ class ClipboardKeyboard : InputMethodService() {
         }
     }
 
+    private fun longPressOptionsForKey(key: String): List<String> {
+        if (key.length != 1 || key[0] !in '\u0621'..'\u064A') {
+            return emptyList()
+        }
+
+        val marks = when (key) {
+            "ا" -> listOf("اَ", "اُ", "اِ", "اّ")
+            else -> listOf(
+                "$keyَ", "$keyً", "$keyُ", "$keyٌ",
+                "$keyِ", "$keyٍ", "$keyْ", "$keyّ"
+            )
+        }
+
+        val special = when (key) {
+            "ا" -> listOf("أ", "إ", "آ", "ٱ")
+            "و" -> listOf("ؤ")
+            "ي" -> listOf("ى", "ئ")
+            "ه" -> listOf("ة")
+            "ة" -> listOf("ه")
+            "أ" -> listOf("إ", "آ", "ا")
+            "ء" -> listOf("ئ", "ؤ", "أ", "إ")
+            "ل" -> listOf("لا")
+            else -> emptyList()
+        }
+
+        return (special + marks).distinct().take(8)
+    }
+
     private fun createKeyButton(
         rowLayout: LinearLayout,
         key: String
     ) {
-
-        val bgColor =
-            when (currentThemeIndex) {
-
-                0 ->
-                    Color.parseColor(
-                        "#333333"
-                    )
-
-                1 ->
-                    Color.WHITE
-
-                else ->
-                    Color.parseColor(
-                        "#1565C0"
-                    )
-            }
+        val bgColor = when (currentThemeIndex) {
+            0 -> Color.parseColor("#333333")
+            1 -> Color.WHITE
+            else -> Color.parseColor("#1565C0")
+        }
 
         val textColor =
-            if (currentThemeIndex == 1)
-                Color.BLACK
-            else
-                Color.WHITE
+            if (currentThemeIndex == 1) Color.BLACK else Color.WHITE
 
-        val shownKey =
-            displayKey(key)
-
-        val keyView =
-            FastKeyView(this).apply {
-
-                text = shownKey
-
-                this.textColor =
-                    textColor
-
-                keyColor =
-                    bgColor
-
-                pressedKeyColor =
-                    when (currentThemeIndex) {
-                        1 ->
-                            Color.parseColor(
-                                "#D0D0D0"
-                            )
-
-                        else ->
-                            Color.parseColor(
-                                "#555555"
-                            )
-                    }
-
-                textSize = 17f
-
-                enableKeyHaptic = true
-            }
+        val shownKey = displayKey(key)
 
         var weight = 1f
 
         when (key) {
-
-            "مسافة" ->
-                weight = 4f
-
-            "↵",
-            "⌫",
-            "⇧",
-            "?123",
-            "ABC",
-            "🌐",
-            "☺" ->
-                weight = 1.5f
+            "مسافة", "العربية" -> weight = 4f
+            "↵", "➡️", "⌫", "⇧", "?123", "؟123",
+            "ABC", "🌐", "☺", "🙂", "☀️" -> weight = 1.5f
         }
 
-        val params =
-            LinearLayout.LayoutParams(
-                0,
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                weight
-            )
-
-        params.setMargins(
-            3,
-            3,
-            3,
-            3
-        )
-
-        keyView.layoutParams =
-            params
-
-        keyView.setOnClickListener {
-            handleKey(key)
+        val params = LinearLayout.LayoutParams(
+            0,
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            weight
+        ).apply {
+            setMargins(3, 3, 3, 3)
         }
 
-        rowLayout.addView(
-            keyView
-        )
+        // TextView يعرض الإيموجي المركب بصورة أفضل من الرسم اليدوي.
+        if (emojiMode && key != "🔙 رجوع") {
+            val emojiView = android.widget.TextView(this).apply {
+                text = shownKey
+                textSize = 23f
+                gravity = android.view.Gravity.CENTER
+                includeFontPadding = false
+                setTextColor(textColor)
+                setBackgroundColor(bgColor)
+                layoutParams = params
+                isClickable = true
+                isFocusable = false
+                setOnClickListener { handleKey(key) }
+            }
+
+            rowLayout.addView(emojiView)
+            return
+        }
+
+        val keyView = FastKeyView(this).apply {
+            text = shownKey
+            this.textColor = textColor
+            keyColor = bgColor
+
+            pressedKeyColor = if (currentThemeIndex == 1) {
+                Color.parseColor("#D0D0D0")
+            } else {
+                Color.parseColor("#555555")
+            }
+
+            textSize = 17f
+            enableKeyHaptic = true
+            longPressOptions = longPressOptionsForKey(key)
+            onLongPressOptionSelected = { selected ->
+                handleKey(selected)
+            }
+
+            layoutParams = params
+            setOnClickListener { handleKey(key) }
+        }
+
+        rowLayout.addView(keyView)
     }
+
 
     private fun displayKey(
         key: String
@@ -906,7 +907,7 @@ class ClipboardKeyboard : InputMethodService() {
                 ic.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER))
             }
 
-            "مسافة", " " -> ic.commitText(" ", 1)
+            "مسافة", " ", "العربية" -> ic.commitText(" ", 1)
 
             "؟123", "?123" -> {
                 numberMode = true
@@ -920,16 +921,7 @@ class ClipboardKeyboard : InputMethodService() {
                 generateKeyboardLayout()
             }
 
-            "العربية" -> {
-                currentLayoutIndex = 0
-                numberMode = false
-                emojiMode = false
-                shiftMode = false
-                layoutPrefs().edit()
-                    .putInt("keyboard_layout", currentLayoutIndex)
-                    .apply()
-                generateKeyboardLayout()
-            }
+            "العربية" -> ic.commitText(" ", 1)
 
             "🌐" -> {
                 currentLayoutIndex =
