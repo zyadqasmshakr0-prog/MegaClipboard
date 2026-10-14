@@ -878,130 +878,27 @@ class ClipboardKeyboard : InputMethodService() {
 
     override fun onCreateCandidatesView(): android.view.View {
         val bar = android.widget.LinearLayout(this).apply {
-            layoutParams = android.view.ViewGroup.LayoutParams(
-                android.view.ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(46)
-            )
+            layoutParams = android.view.ViewGroup.LayoutParams(android.view.ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(45))
             orientation = android.widget.LinearLayout.HORIZONTAL
-            gravity = android.view.Gravity.CENTER_VERTICAL
-            setPadding(dpToPx(4), 0, dpToPx(4), 0)
-            setBackgroundColor(android.graphics.Color.parseColor("#202124"))
+            setBackgroundColor(android.graphics.Color.parseColor("#151515"))
         }
-
-        candidatesBar = bar
-        candidateButtons.clear()
-
-        repeat(3) {
-            val button = android.widget.Button(this).apply {
-                layoutParams = android.widget.LinearLayout.LayoutParams(
-                    0,
-                    android.view.ViewGroup.LayoutParams.MATCH_PARENT,
-                    1f
-                ).apply {
-                    setMargins(dpToPx(2), dpToPx(3), dpToPx(2), dpToPx(3))
-                }
-                text = ""
-                textSize = 14f
-                isAllCaps = false
-                setTextColor(android.graphics.Color.WHITE)
-                setBackgroundColor(android.graphics.Color.TRANSPARENT)
-                setOnClickListener {
-                    val word = text?.toString()?.trim().orEmpty()
-                    if (word.isNotEmpty()) applySuggestion(word)
-                }
-            }
-            candidateButtons.add(button)
-            bar.addView(button)
+        val suggestions = android.widget.TextView(this).apply {
+            layoutParams = android.widget.LinearLayout.LayoutParams(0, android.view.ViewGroup.LayoutParams.MATCH_PARENT, 1f)
+            text = "المقترحات..."
+            setTextColor(android.graphics.Color.GRAY)
+            gravity = android.view.Gravity.CENTER
         }
-
-        val clipboardButton = android.widget.Button(this).apply {
-            layoutParams = android.widget.LinearLayout.LayoutParams(
-                dpToPx(48),
-                android.view.ViewGroup.LayoutParams.MATCH_PARENT
-            )
-            text = "📋"
-            textSize = 18f
-            isAllCaps = false
+        bar.addView(suggestions)
+        val clipboardBtn = android.widget.Button(this).apply {
+            layoutParams = android.widget.LinearLayout.LayoutParams(android.view.ViewGroup.LayoutParams.WRAP_CONTENT, android.view.ViewGroup.LayoutParams.MATCH_PARENT)
+            text = "📋 الحافظة"
             setTextColor(android.graphics.Color.WHITE)
             setBackgroundColor(android.graphics.Color.TRANSPARENT)
-            setOnClickListener {
-                val clipboard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
-                val clip = clipboard.primaryClip
-                if (clip != null && clip.itemCount > 0) {
-                    currentInputConnection?.commitText(
-                        clip.getItemAt(0).coerceToText(this@ClipboardKeyboard), 1
-                    )
-                    updateSuggestions()
-                } else {
-                    android.widget.Toast.makeText(
-                        this@ClipboardKeyboard, "الحافظة فارغة",
-                        android.widget.Toast.LENGTH_SHORT
-                    ).show()
-                }
-            }
+            setOnClickListener { android.widget.Toast.makeText(this@ClipboardKeyboard, "سيتم ربطها بمحرك C++", android.widget.Toast.LENGTH_SHORT).show() }
         }
-        bar.addView(clipboardButton)
-        updateSuggestions()
+        bar.addView(clipboardBtn)
         return bar
-    }
-
-    private var candidatesBar: android.widget.LinearLayout? = null
-    private val candidateButtons = mutableListOf<android.widget.Button>()
-
-    private fun applySuggestion(word: String) {
-        val ic = currentInputConnection ?: return
-        val before = ic.getTextBeforeCursor(120, 0)?.toString().orEmpty()
-        val match = Regex("[\\p{L}\\p{N}_]+$").find(before)
-        if (match != null) ic.deleteSurroundingText(match.value.length, 0)
-        ic.commitText("$word ", 1)
-        updateSuggestions()
-    }
-
-    private fun updateSuggestions() {
-        val before = currentInputConnection
-            ?.getTextBeforeCursor(120, 0)?.toString().orEmpty()
-        val prefix = Regex("[\\p{L}\\p{N}_]+$").find(before)?.value.orEmpty()
-
-        val dictionary = listOf(
-            "مرحبا", "السلام", "عليكم", "كيف", "حالك", "أنا", "أنت",
-            "نعم", "لا", "شكرا", "تمام", "ممتاز", "ممكن", "اليوم",
-            "غدا", "أريد", "أحتاج", "هذا", "هذه", "هناك", "الذي",
-            "التي", "من", "في", "على", "مع", "الله", "إن", "شاء",
-            "hello", "hi", "how", "you", "the", "and", "thanks",
-            "yes", "no", "good", "okay", "please", "what", "this"
-        )
-
-        val matches = if (prefix.isBlank()) emptyList() else {
-            dictionary.filter {
-                it.startsWith(prefix, ignoreCase = true) &&
-                    !it.equals(prefix, ignoreCase = true)
-            }.distinct().take(3)
-        }
-
-        candidateButtons.forEachIndexed { index, button ->
-            val word = matches.getOrNull(index).orEmpty()
-            button.text = word
-            button.visibility = if (word.isEmpty()) android.view.View.INVISIBLE
-                else android.view.View.VISIBLE
-        }
-        candidatesBar?.visibility = android.view.View.VISIBLE
-    }
-
-    override fun onUpdateSelection(
-        oldSelStart: Int,
-        oldSelEnd: Int,
-        newSelStart: Int,
-        newSelEnd: Int,
-        candidatesStart: Int,
-        candidatesEnd: Int
-    ) {
-        super.onUpdateSelection(
-            oldSelStart, oldSelEnd, newSelStart, newSelEnd,
-            candidatesStart, candidatesEnd
-        )
-        updateSuggestions()
-    }
-
-    private fun playKeySound() {
+    }    private fun playKeySound() {
         val prefs = android.preference.PreferenceManager
             .getDefaultSharedPreferences(this)
 
@@ -1017,42 +914,6 @@ class ClipboardKeyboard : InputMethodService() {
         } catch (_: Exception) {
         }
     }
-    
-    private fun handleEnterAction() {
-        val ic = currentInputConnection ?: return
-        val info = currentInputEditorInfo
-
-        if (info != null) {
-            val action = info.imeOptions and
-                android.view.inputmethod.EditorInfo.IME_MASK_ACTION
-
-            val hasAction = info.actionId != 0 ||
-                (action != android.view.inputmethod.EditorInfo.IME_ACTION_NONE &&
-                 action != android.view.inputmethod.EditorInfo.IME_ACTION_UNSPECIFIED)
-
-            if (hasAction) {
-                val actionId = if (info.actionId != 0) info.actionId else action
-                if (ic.performEditorAction(actionId)) {
-                    updateSuggestions()
-                    return
-                }
-            }
-
-            val multiline = (info.inputType and
-                android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE) != 0
-
-            if (multiline) {
-                ic.commitText("\n", 1)
-                updateSuggestions()
-                return
-            }
-        }
-
-        ic.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER))
-        ic.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER))
-        updateSuggestions()
-    }
-
     private fun handleKey(key: String) {
         playKeySound()
         val ic = currentInputConnection ?: return
@@ -1061,7 +922,8 @@ class ClipboardKeyboard : InputMethodService() {
             "⌫" -> ic.deleteSurroundingText(1, 0)
 
             "➡️", "↵" -> {
-                handleEnterAction()
+                ic.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER))
+                ic.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER))
             }
 
             "مسافة", " ", "العربية" -> ic.commitText(" ", 1)
@@ -1130,7 +992,6 @@ class ClipboardKeyboard : InputMethodService() {
                 ) key.uppercase(Locale.ROOT) else key
 
                 ic.commitText(output, 1)
-                updateSuggestions()
                 shiftMode = false
             }
         }
