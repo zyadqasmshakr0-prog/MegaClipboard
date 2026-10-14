@@ -623,8 +623,10 @@ class ClipboardKeyboard : InputMethodService() {
             }
 
             textSize = 17f
-            enableKeyHaptic = true
+            enableKeyHaptic = android.preference.PreferenceManager.getDefaultSharedPreferences(this@ClipboardKeyboard).getBoolean("keyboard_vibration", true)
             longPressOptions = longPressOptionsForKey(key)
+            repeatDeleteOnLongPress = (key == "⌫" || key == "âŒ«")
+            enablePreview = key.length == 1 && key != " " && key != "🌐" && key != "🙂"
             onLongPressOptionSelected = { selected ->
                 handleKey(selected)
             }
@@ -896,7 +898,24 @@ class ClipboardKeyboard : InputMethodService() {
         }
         bar.addView(clipboardBtn)
         return bar
-    }    private fun handleKey(key: String) {
+    }    private fun playKeySound() {
+        val prefs = android.preference.PreferenceManager
+            .getDefaultSharedPreferences(this)
+
+        if (!prefs.getBoolean("keyboard_sound", true)) return
+
+        try {
+            val audioManager = getSystemService(android.content.Context.AUDIO_SERVICE)
+                as android.media.AudioManager
+
+            audioManager.playSoundEffect(
+                android.media.AudioManager.FX_KEYPRESS_STANDARD
+            )
+        } catch (_: Exception) {
+        }
+    }
+    private fun handleKey(key: String) {
+        playKeySound()
         val ic = currentInputConnection ?: return
 
         when (key) {

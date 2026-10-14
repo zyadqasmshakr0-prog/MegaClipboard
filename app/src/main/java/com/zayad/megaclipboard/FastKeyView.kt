@@ -48,6 +48,7 @@ class FastKeyView(context: Context) : View(context) {
     var pressedKeyColor: Int = Color.rgb(70, 70, 70)
     var cornerRadius: Float = 10f
     var enableKeyHaptic: Boolean = true
+    var enablePreview: Boolean = true
 
     var longPressOptions: List<String> = emptyList()
     var onLongPressOptionSelected: ((String) -> Unit)? = null
@@ -79,8 +80,22 @@ class FastKeyView(context: Context) : View(context) {
     private fun dp(value: Int): Int =
         (value * resources.displayMetrics.density).toInt()
 
+    private var deleteRepeatEnabled = false
+
+    private val deleteRepeatRunnable = object : Runnable {
+        override fun run() {
+            if (!pressed || !deleteRepeatEnabled || longPressTriggered) return
+            performClick()
+            postDelayed(this, 65L)
+        }
+    }
+
+    var repeatDeleteOnLongPress: Boolean = false
     private val longPressRunnable = Runnable {
-        if (pressed && longPressOptions.isNotEmpty()) {
+        if (pressed && repeatDeleteOnLongPress) {
+            deleteRepeatEnabled = true
+            postDelayed(deleteRepeatRunnable, 350L)
+        } else if (pressed && longPressOptions.isNotEmpty()) {
             longPressTriggered = true
             selectedOption = -1
             dismissPreview()
@@ -319,9 +334,9 @@ class FastKeyView(context: Context) : View(context) {
                     )
                 }
 
-                showPreview()
+                if (enablePreview) showPreview()
 
-                if (longPressOptions.isNotEmpty()) {
+                if (longPressOptions.isNotEmpty() || repeatDeleteOnLongPress) {
                     postDelayed(
                         longPressRunnable,
                         ViewConfiguration.getLongPressTimeout().toLong()
@@ -341,6 +356,7 @@ class FastKeyView(context: Context) : View(context) {
             MotionEvent.ACTION_UP -> {
                 removeCallbacks(longPressRunnable)
 
+                val wasRepeatingDelete = deleteRepeatEnabled
                 val wasLongPress = longPressTriggered
                 val chosen = selectedOption
 
@@ -348,6 +364,12 @@ class FastKeyView(context: Context) : View(context) {
                 invalidate()
                 dismissPreview()
 
+                if (wasRepeatingDelete) {
+                    dismissOptionsPopup()
+                    longPressTriggered = false
+                    selectedOption = -1
+                    return true
+                }
                 if (wasLongPress) {
                     dismissOptionsPopup()
 

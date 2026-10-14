@@ -38,8 +38,21 @@ class MainActivity : Activity() {
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
             setOnClickListener { showGeneralTab() }
         }
+        val tabSound = Button(this).apply {
+            text = "🔊 الصوت والاهتزاز"
+            isAllCaps = false
+            textSize = 11f
+            setTextColor(Color.WHITE)
+            setBackgroundColor(Color.TRANSPARENT)
+            layoutParams = LinearLayout.LayoutParams(
+                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f
+            )
+            setOnClickListener { showSoundVibrationTab() }
+        }
+
         tabBar.addView(tabLayouts)
         tabBar.addView(tabGeneral)
+        tabBar.addView(tabSound)
         root.addView(tabBar)
 
         val scroll = ScrollView(this).apply {
@@ -129,6 +142,81 @@ contentContainer.addView(back)
         }
     }
 
+    private fun showSoundVibrationTab() {
+        contentContainer.removeAllViews()
+
+        val prefs = PreferenceManager.getDefaultSharedPreferences(this)
+
+        val title = TextView(this).apply {
+            text = "🔊 الصوت والاهتزاز"
+            setTextColor(Color.WHITE)
+            textSize = 22f
+            setPadding(0, 0, 0, 24)
+        }
+        contentContainer.addView(title)
+
+        val description = TextView(this).apply {
+            text = "خصص صوت طقطقة المفاتيح والاهتزاز عند الكتابة."
+            setTextColor(Color.LTGRAY)
+            textSize = 15f
+            setPadding(0, 0, 0, 20)
+        }
+        contentContainer.addView(description)
+
+        var soundEnabled = prefs.getBoolean("keyboard_sound", true)
+        var vibrationEnabled = prefs.getBoolean("keyboard_vibration", true)
+
+        val soundButton = createSettingsBtn("", "#424242") {}
+        val vibrationButton = createSettingsBtn("", "#424242") {}
+
+        fun refreshButtons() {
+            soundButton.text =
+                if (soundEnabled) "🔊 صوت الطقطقة: مفعّل"
+                else "🔇 صوت الطقطقة: معطّل"
+
+            soundButton.setBackgroundColor(
+                Color.parseColor(if (soundEnabled) "#1565C0" else "#424242")
+            )
+
+            vibrationButton.text =
+                if (vibrationEnabled) "📳 الاهتزاز: مفعّل"
+                else "📳 الاهتزاز: معطّل"
+
+            vibrationButton.setBackgroundColor(
+                Color.parseColor(if (vibrationEnabled) "#1565C0" else "#424242")
+            )
+        }
+
+        soundButton.setOnClickListener {
+            soundEnabled = !soundEnabled
+            prefs.edit().putBoolean("keyboard_sound", soundEnabled).apply()
+            refreshButtons()
+        }
+
+        vibrationButton.setOnClickListener {
+            vibrationEnabled = !vibrationEnabled
+            prefs.edit().putBoolean("keyboard_vibration", vibrationEnabled).apply()
+            refreshButtons()
+        }
+
+        refreshButtons()
+        contentContainer.addView(soundButton)
+        contentContainer.addView(vibrationButton)
+
+        val note = TextView(this).apply {
+            text = "تُحفظ اختياراتك تلقائيًا. قد يتأثر الصوت بإعدادات صوت النظام."
+            setTextColor(Color.GRAY)
+            textSize = 13f
+            setPadding(0, 12, 0, 20)
+        }
+        contentContainer.addView(note)
+
+        contentContainer.addView(
+            createSettingsBtn("🔙 الرجوع إلى الإعدادات العامة", "#333333") {
+                showGeneralTab()
+            }
+        )
+    }
     private fun notifyKeyboardLayoutChanged() {
         sendBroadcast(
             android.content.Intent("com.zayad.megaclipboard.LAYOUT_CHANGED")
