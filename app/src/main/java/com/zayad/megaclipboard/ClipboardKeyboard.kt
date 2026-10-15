@@ -31,6 +31,10 @@ class ClipboardKeyboard : InputMethodService() {
     private var historyContainer: LinearLayout? = null
     private var btnToggleView: Button? = null
 
+    private var toolbarButtons: List<View> = emptyList()
+    private var suggestionsBar: LinearLayout? = null
+    private var suggestionsMode = false
+
     private var dialogOverlay: LinearLayout? = null
     private var btnPin: Button? = null
     private var btnDelete: Button? = null
@@ -185,6 +189,42 @@ class ClipboardKeyboard : InputMethodService() {
         btnToggleView =
             view.findViewById(R.id.btn_toggle_view)
 
+        toolbarButtons = listOf(
+            view.findViewById<Button>(R.id.btn_theme),
+            view.findViewById<Button>(R.id.btn_translate),
+            view.findViewById<Button>(R.id.btn_settings_top),
+            view.findViewById<Button>(R.id.btn_emoji),
+            view.findViewById<Button>(R.id.btn_toggle_view)
+        )
+
+        suggestionsBar = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
+            layoutDirection = View.LAYOUT_DIRECTION_LTR
+            visibility = View.GONE
+            setPadding(dpToPx(3), 0, dpToPx(3), 0)
+            setBackgroundColor(Color.TRANSPARENT)
+        }
+
+        topToolbar?.addView(
+            suggestionsBar,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        )
+
+        view.findViewById<Button>(R.id.btn_emoji).setOnClickListener {
+            emojiMode = true
+            numberMode = false
+            isClipboardMode = false
+            layoutClipboardContainer?.visibility = View.GONE
+            layoutKeysContainer?.visibility = View.VISIBLE
+            btnToggleView?.text = "📋"
+            generateKeyboardLayout()
+            updateSmartToolbarState(forceButtons = true)
+        }
+
         view.findViewById<Button>(
             R.id.btn_settings_top
         ).setOnClickListener {
@@ -294,6 +334,7 @@ class ClipboardKeyboard : InputMethodService() {
 
         applyTheme()
         generateKeyboardLayout()
+        updateSmartToolbarState(forceButtons = true)
 
         return view
     }
@@ -877,6 +918,7 @@ class ClipboardKeyboard : InputMethodService() {
         numberMode = false
         setCandidatesViewShown(false)
         generateKeyboardLayout()
+        updateSmartToolbarState(forceButtons = true)
     }
 
     override fun onCreateCandidatesView(): android.view.View {
@@ -901,7 +943,183 @@ class ClipboardKeyboard : InputMethodService() {
         }
         bar.addView(clipboardBtn)
         return bar
-    }    private fun playKeySound() {
+    }    private fun updateSmartToolbarState(forceButtons: Boolean = false) {
+        val before = currentInputConnection
+            ?.getTextBeforeCursor(300, 0)
+            ?.toString()
+            .orEmpty()
+
+        val showButtons =
+            forceButtons ||
+            isClipboardMode ||
+            before.isEmpty() ||
+            before.endsWith("\n") ||
+            before.endsWith("\r") ||
+            before.endsWith(",") ||
+            before.endsWith("،")
+
+        suggestionsMode = !showButtons
+
+        toolbarButtons.forEach { button ->
+            button.visibility = if (showButtons) View.VISIBLE else View.GONE
+        }
+
+        suggestionsBar?.visibility =
+            if (showButtons) View.GONE else View.VISIBLE
+
+        if (!showButtons) {
+            refreshSmartSuggestions(before)
+        }
+    }
+
+    private fun refreshSmartSuggestions(before: String) {
+        val bar = suggestionsBar ?: return
+        bar.removeAllViews()
+
+        val wordMatch = Regex("[\\p{L}\\p{M}]+$").find(before)
+        val prefix = wordMatch?.value.orEmpty()
+        val normalizedPrefix = prefix.lowercase(Locale.ROOT)
+
+        val dictionary = listOf(
+            "السلام", "السلام عليكم", "عليكم", "وعليكم", "ورحمة",
+            "الله", "وبركاته", "مرحبا", "أهلا", "وسهلا", "كيف",
+            "حالك", "حالي", "الحمد", "لله", "شكرا", "شكراً",
+            "من", "أنا", "أنت", "هو", "هي", "نحن", "هذا", "هذه",
+            "الذي", "التي", "الذين", "في", "على", "إلى", "عن",
+            "مع", "بعد", "قبل", "اليوم", "غدا", "غداً", "جميل",
+            "جيد", "ممتاز", "أريد", "أحتاج", "ممكن", "نعم", "لا",
+            "لماذا", "كيف", "متى", "أين", "ماذا", "لأن", "لكن",
+            "إذا", "كان", "كانت", "يكون", "تكون", "يمكن", "سوف",
+            "سأكون", "بالتأكيد", "صحيح", "تمام", "إن شاء الله",
+            "the", "this", "that", "there", "their", "they",
+            "hello", "hi", "how", "are", "you", "your", "thanks",
+            "thank", "please", "what", "when", "where", "why",
+            "because", "with", "from", "have", "has", "will",
+            "would", "could", "should", "good", "great", "yes",
+            "not", "and", "but", "for", "about", "can", "want",
+            "need", "today", "tomorrow", "friend", "love", "help"
+        )
+
+        val previousWords = before
+            .removeSuffix(prefix)
+            .trim()
+            .split(Regex("\\s+"))
+            .filter { it.isNotBlank() }
+
+        val previous = previousWords.lastOrNull()?.lowercase(Locale.ROOT).orEmpty()
+
+        val contextSuggestions = when (previous) {
+            "السلام" -> listOf("عليكم")
+            "عليكم" -> listOf("ورحمة", "السلام")
+            "ورحمة" -> listOf("الله")
+            "الله" -> listOf("وبركاته", "يحفظك")
+            "كيف" -> listOf("حالك", "حالك؟", "أنت")
+            "الحمد" -> listOf("لله")
+            "شكرا", "شكراً" -> listOf("لك", "جزيلاً")
+            "إن" -> listOf("شاء")
+            "شاء" -> listOf("الله")
+            "how" -> listOf("are", "do", "is")
+            "thank" -> listOf("you")
+            "good" -> listOf("morning", "day", "evening")
+            "see" -> listOf("you")
+            "i" -> listOf("am", "will", "can", "want", "need")
+            else -> emptyList()
+        }
+
+        val matches = (
+            contextSuggestions +
+            dictionary.filter {
+                normalizedPrefix.length >= 1 &&
+                    it.lowercase(Locale.ROOT).startsWith(normalizedPrefix) &&
+                    it.lowercase(Locale.ROOT) != normalizedPrefix
+            }
+        ).distinct().take(5)
+
+        if (matches.isEmpty()) {
+            val hint = android.widget.TextView(this).apply {
+                text = if (prefix.isBlank()) "اكتب للبدء" else "تابع الكتابة"
+                textSize = 13f
+                gravity = android.view.Gravity.CENTER
+                setTextColor(Color.LTGRAY)
+                maxLines = 1
+                setPadding(dpToPx(8), 0, dpToPx(8), 0)
+            }
+
+            bar.addView(
+                hint,
+                LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f)
+            )
+            return
+        }
+
+        matches.forEach { suggestion ->
+            val chip = android.widget.TextView(this).apply {
+                text = suggestion
+                textSize = 14f
+                gravity = android.view.Gravity.CENTER
+                maxLines = 1
+                ellipsize = android.text.TextUtils.TruncateAt.END
+                setTextColor(
+                    if (currentThemeIndex == 1) Color.BLACK else Color.WHITE
+                )
+                setPadding(dpToPx(7), 0, dpToPx(7), 0)
+                isClickable = true
+                isFocusable = false
+                setOnClickListener {
+                    applySmartSuggestion(suggestion)
+                }
+            }
+
+            bar.addView(
+                chip,
+                LinearLayout.LayoutParams(
+                    0,
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    1f
+                )
+            )
+        }
+    }
+
+    private fun applySmartSuggestion(suggestion: String) {
+        val ic = currentInputConnection ?: return
+        val before = ic.getTextBeforeCursor(300, 0)?.toString().orEmpty()
+        val currentWord = Regex("[\\p{L}\\p{M}]+$").find(before)?.value.orEmpty()
+
+        if (currentWord.isNotEmpty()) {
+            ic.deleteSurroundingText(currentWord.length, 0)
+        }
+
+        ic.commitText("$suggestion ", 1)
+
+        Handler(Looper.getMainLooper()).postDelayed({
+            updateSmartToolbarState()
+        }, 50)
+    }
+
+    override fun onUpdateSelection(
+        oldSelStart: Int,
+        oldSelEnd: Int,
+        newSelStart: Int,
+        newSelEnd: Int,
+        candidatesStart: Int,
+        candidatesEnd: Int
+    ) {
+        super.onUpdateSelection(
+            oldSelStart,
+            oldSelEnd,
+            newSelStart,
+            newSelEnd,
+            candidatesStart,
+            candidatesEnd
+        )
+
+        Handler(Looper.getMainLooper()).postDelayed({
+            updateSmartToolbarState()
+        }, 40)
+    }
+
+    private fun playKeySound() {
         val prefs = android.preference.PreferenceManager
             .getDefaultSharedPreferences(this)
 
@@ -998,6 +1216,10 @@ class ClipboardKeyboard : InputMethodService() {
                 shiftMode = false
             }
         }
+
+        Handler(Looper.getMainLooper()).postDelayed({
+            updateSmartToolbarState()
+        }, 50)
     }
 
     private fun generateKeyboardLayout() {
