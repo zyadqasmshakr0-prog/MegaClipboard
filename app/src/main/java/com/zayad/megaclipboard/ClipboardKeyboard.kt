@@ -154,6 +154,9 @@ class ClipboardKeyboard : InputMethodService() {
         super.onDestroy()
     }
 
+    override fun onEvaluateFullscreenMode(): Boolean {
+        return false
+    }
     override fun onCreateInputView(): View {
 
         EngineManager.cleanupEngine()
@@ -872,7 +875,7 @@ class ClipboardKeyboard : InputMethodService() {
         currentLayoutIndex = layoutPrefs().getInt("keyboard_layout", 0)
         emojiMode = false
         numberMode = false
-        setCandidatesViewShown(true)
+        setCandidatesViewShown(false)
         generateKeyboardLayout()
     }
 
