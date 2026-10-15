@@ -972,6 +972,106 @@ class ClipboardKeyboard : InputMethodService() {
         }
     }
 
+    private fun isLearningAllowed(): Boolean {
+        val inputType = currentInputEditorInfo?.inputType ?: 0
+        val variation = inputType and android.text.InputType.TYPE_MASK_VARIATION
+        val inputClass = inputType and android.text.InputType.TYPE_MASK_CLASS
+
+        if (inputClass == android.text.InputType.TYPE_CLASS_TEXT) {
+            if (variation == android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD ||
+                variation == android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD ||
+                variation == android.text.InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD) {
+                return false
+            }
+        }
+
+        if (inputClass == android.text.InputType.TYPE_CLASS_NUMBER &&
+            variation == android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD) {
+            return false
+        }
+
+        return true
+    }
+
+    private fun learnSmartWord(text: String) {
+        if (!isLearningAllowed()) return
+
+        val words = Regex("[\\p{L}\\p{M}]+")
+            .findAll(text)
+            .map { it.value }
+            .toList()
+
+        if (words.isEmpty()) return
+
+        val word = words.last().trim()
+        if (word.length < 2) return
+
+        val normalized = word.lowercase(Locale.ROOT)
+        val wordKey = "smart_word_$normalized"
+        val countKey = "smart_count_$normalized"
+
+        val editor = prefs().edit()
+        editor.putString(wordKey, word)
+        editor.putInt(countKey, prefs().getInt(countKey, 0) + 1)
+
+        if (words.size >= 2) {
+            val previous = words[words.lastIndex - 1].lowercase(Locale.ROOT)
+            val pairKey = "smart_pair_count|$previous|$normalized"
+            val pairTextKey = "smart_pair_text|$previous|$normalized"
+
+            editor.putInt(pairKey, prefs().getInt(pairKey, 0) + 1)
+            editor.putString(pairTextKey, word)
+        }
+
+        editor.apply()
+    }
+
+    private fun getPersonalWordSuggestions(prefix: String): List<String> {
+        if (prefix.isBlank() || !isLearningAllowed()) return emptyList()
+
+        return prefs().all.entries
+            .asSequence()
+            .filter { it.key.startsWith("smart_word_") && it.value is String }
+            .mapNotNull { entry ->
+                val word = entry.value as? String ?: return@mapNotNull null
+                if (!word.lowercase(Locale.ROOT).startsWith(prefix.lowercase(Locale.ROOT))) {
+                    return@mapNotNull null
+                }
+
+                val normalized = word.lowercase(Locale.ROOT)
+                val count = prefs().getInt("smart_count_$normalized", 0)
+                word to count
+            }
+            .filter { it.first.lowercase(Locale.ROOT) != prefix.lowercase(Locale.ROOT) }
+            .sortedByDescending { it.second }
+            .map { it.first }
+            .distinct()
+            .take(10)
+            .toList()
+    }
+
+    private fun getLearnedNextWords(previous: String): List<String> {
+        if (previous.isBlank() || !isLearningAllowed()) return emptyList()
+
+        val prefix = "smart_pair_text|${previous.lowercase(Locale.ROOT)}|"
+
+        return prefs().all.entries
+            .asSequence()
+            .filter { it.key.startsWith(prefix) && it.value is String }
+            .mapNotNull { entry ->
+                val word = entry.value as? String ?: return@mapNotNull null
+                val countKey = entry.key.replace(
+                    "smart_pair_text|",
+                    "smart_pair_count|"
+                )
+                word to prefs().getInt(countKey, 0)
+            }
+            .sortedByDescending { it.second }
+            .map { it.first }
+            .distinct()
+            .take(5)
+            .toList()
+    }
     private fun refreshSmartSuggestions(before: String) {
         val bar = suggestionsBar ?: return
         bar.removeAllViews()
@@ -1026,8 +1126,13 @@ class ClipboardKeyboard : InputMethodService() {
             else -> emptyList()
         }
 
+        val learnedWords = getPersonalWordSuggestions(normalizedPrefix)
+        val learnedNext = getLearnedNextWords(previous)
+
         val matches = (
             contextSuggestions +
+            learnedNext +
+            learnedWords +
             dictionary.filter {
                 normalizedPrefix.length >= 1 &&
                     it.lowercase(Locale.ROOT).startsWith(normalizedPrefix) &&
@@ -1143,11 +1248,17 @@ class ClipboardKeyboard : InputMethodService() {
             "⌫" -> ic.deleteSurroundingText(1, 0)
 
             "➡️", "↵" -> {
+                val before = ic.getTextBeforeCursor(300, 0)?.toString().orEmpty()
+                learnSmartWord(before)
                 ic.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER))
                 ic.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER))
             }
 
-            "مسافة", " ", "العربية" -> ic.commitText(" ", 1)
+            "مسافة", " ", "العربية" -> {
+                val before = ic.getTextBeforeCursor(300, 0)?.toString().orEmpty()
+                learnSmartWord(before)
+                ic.commitText(" ", 1)
+            }
 
             "؟123", "?123" -> {
                 numberMode = true
@@ -1211,6 +1322,11 @@ class ClipboardKeyboard : InputMethodService() {
                     shiftMode &&
                     currentLayoutIndex == KeyboardLayoutManager.ENGLISH_INDEX
                 ) key.uppercase(Locale.ROOT) else key
+
+                if (output.any { it.isWhitespace() || it in ",،.!?؟;؛:" }) {
+                    val before = ic.getTextBeforeCursor(300, 0)?.toString().orEmpty()
+                    learnSmartWord(before)
+                }
 
                 ic.commitText(output, 1)
                 shiftMode = false
